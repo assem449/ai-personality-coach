@@ -1,41 +1,50 @@
-"use client";
+'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { mbtiQuestions, type MBTIQuestion } from '@/data/mbti-questions';
+import { Button } from '@/components/ui/Button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { mbtiQuestions } from '@/data/mbti-questions';
+
+const getDimensionName = (value: string): string => {
+  switch (value) {
+    case 'E': return 'Extraversion';
+    case 'I': return 'Introversion';
+    case 'S': return 'Sensing';
+    case 'N': return 'Intuition';
+    case 'T': return 'Thinking';
+    case 'F': return 'Feeling';
+    case 'J': return 'Judging';
+    case 'P': return 'Perceiving';
+    default: return 'Unknown';
+  }
+};
 
 export default function QuizPage() {
   const router = useRouter();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState('');
 
-  const question = mbtiQuestions[currentQuestion];
-  const isLastQuestion = currentQuestion === mbtiQuestions.length - 1;
-  const allQuestionsAnswered = Object.keys(answers).length === mbtiQuestions.length;
+  const progress = ((currentQuestion + 1) / mbtiQuestions.length) * 100;
 
-  const handleAnswer = (value: string) => {
+  const handleAnswer = (questionId: number, answer: string) => {
     setAnswers(prev => ({
       ...prev,
-      [question.dimension]: value
+      [questionId.toString()]: answer
     }));
+    
+    // Auto-advance to next question after a short delay
+    setTimeout(() => {
+      if (currentQuestion < mbtiQuestions.length - 1) {
+        setCurrentQuestion(prev => prev + 1);
+      }
+    }, 300);
   };
 
-  const nextQuestion = () => {
-    if (currentQuestion < mbtiQuestions.length - 1) {
-      setCurrentQuestion(prev => prev + 1);
-    }
-  };
-
-  const prevQuestion = () => {
-    if (currentQuestion > 0) {
-      setCurrentQuestion(prev => prev - 1);
-    }
-  };
-
-  const submitQuiz = async () => {
-    if (!allQuestionsAnswered) {
+  const handleSubmit = async () => {
+    if (Object.keys(answers).length < mbtiQuestions.length) {
       setError('Please answer all questions before submitting.');
       return;
     }
@@ -49,16 +58,13 @@ export default function QuizPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          answers,
-        }),
+        body: JSON.stringify({ answers }),
       });
 
       const data = await response.json();
 
       if (data.success) {
-        // Redirect to dashboard with success
-        router.push('/dashboard?quiz=completed&type=' + data.mbtiType);
+        router.push('/dashboard');
       } else {
         setError(data.error || 'Failed to submit quiz');
       }
@@ -70,118 +76,189 @@ export default function QuizPage() {
     }
   };
 
-  const getProgressPercentage = () => {
-    return ((currentQuestion + 1) / mbtiQuestions.length) * 100;
-  };
+  const currentQ = mbtiQuestions[currentQuestion];
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-pink-100 to-pink-300">
-      <div className="text-center p-8 rounded-lg shadow-lg bg-white/80 max-w-2xl w-full mx-4">
-        <h1 className="text-3xl font-bold mb-6 text-pink-700">MBTI Personality Quiz</h1>
-        
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-teal-50 py-8">
+      <div className="container mx-auto px-4 max-w-4xl">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
+            Personality Assessment
+          </h1>
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            Discover your unique personality type with our scientifically-backed MBTI assessment. 
+            Answer honestly - there are no right or wrong answers!
+          </p>
+        </div>
+
         {/* Progress Bar */}
         <div className="mb-8">
-          <div className="flex justify-between text-sm text-gray-600 mb-2">
-            <span>Question {currentQuestion + 1} of {mbtiQuestions.length}</span>
-            <span>{Math.round(getProgressPercentage())}% Complete</span>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-slate-700">
+              Question {currentQuestion + 1} of {mbtiQuestions.length}
+            </span>
+            <span className="text-sm font-medium text-slate-700">
+              {Math.round(progress)}% Complete
+            </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-slate-200 rounded-full h-3">
             <div 
-              className="bg-pink-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${getProgressPercentage()}%` }}
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${progress}%` }}
             ></div>
           </div>
         </div>
 
-        {/* Question */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-6 text-gray-800">
-            {question.question}
-          </h2>
-          
-          <div className="space-y-4">
-            <button
-              onClick={() => handleAnswer(question.optionA.value)}
-              className={`w-full p-4 text-left rounded-lg border-2 transition-all duration-200 ${
-                answers[question.dimension] === question.optionA.value
-                  ? 'border-pink-500 bg-pink-50 text-pink-700'
-                  : 'border-gray-300 hover:border-pink-300 hover:bg-pink-50'
-              }`}
-            >
-              <span className="font-medium">A)</span> {question.optionA.text}
-            </button>
-            
-            <button
-              onClick={() => handleAnswer(question.optionB.value)}
-              className={`w-full p-4 text-left rounded-lg border-2 transition-all duration-200 ${
-                answers[question.dimension] === question.optionB.value
-                  ? 'border-pink-500 bg-pink-50 text-pink-700'
-                  : 'border-gray-300 hover:border-pink-300 hover:bg-pink-50'
-              }`}
-            >
-              <span className="font-medium">B)</span> {question.optionB.text}
-            </button>
-          </div>
-        </div>
+        {/* Question Card */}
+        <Card className="mb-8">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl md:text-3xl text-slate-900 mb-4">
+              {currentQ.question}
+            </CardTitle>
+            <CardDescription className="text-lg">
+              Choose the option that best describes you
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Option A */}
+              <button
+                onClick={() => handleAnswer(currentQ.id, currentQ.optionA.value)}
+                className={`w-full p-6 rounded-xl border-2 transition-all duration-200 text-left group hover:shadow-md ${
+                  answers[currentQ.id.toString()] === currentQ.optionA.value
+                    ? 'border-indigo-500 bg-indigo-50 shadow-md'
+                    : 'border-slate-200 bg-white hover:border-indigo-300'
+                }`}
+              >
+                <div className="flex items-start space-x-4">
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-1 ${
+                    answers[currentQ.id.toString()] === currentQ.optionA.value
+                      ? 'border-indigo-500 bg-indigo-500'
+                      : 'border-slate-300 group-hover:border-indigo-400'
+                  }`}>
+                    {answers[currentQ.id.toString()] === currentQ.optionA.value && (
+                      <div className="w-2 h-2 rounded-full bg-white"></div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-lg font-medium text-slate-900 mb-2">
+                      {currentQ.optionA.text}
+                    </p>
+                    <p className="text-sm text-slate-600">
+                      This choice indicates a preference for {getDimensionName(currentQ.optionA.value)}
+                    </p>
+                  </div>
+                </div>
+              </button>
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
-          </div>
-        )}
+              {/* Option B */}
+              <button
+                onClick={() => handleAnswer(currentQ.id, currentQ.optionB.value)}
+                className={`w-full p-6 rounded-xl border-2 transition-all duration-200 text-left group hover:shadow-md ${
+                  answers[currentQ.id.toString()] === currentQ.optionB.value
+                    ? 'border-indigo-500 bg-indigo-50 shadow-md'
+                    : 'border-slate-200 bg-white hover:border-indigo-300'
+                }`}
+              >
+                <div className="flex items-start space-x-4">
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-1 ${
+                    answers[currentQ.id.toString()] === currentQ.optionB.value
+                      ? 'border-indigo-500 bg-indigo-500'
+                      : 'border-slate-300 group-hover:border-indigo-400'
+                  }`}>
+                    {answers[currentQ.id.toString()] === currentQ.optionB.value && (
+                      <div className="w-2 h-2 rounded-full bg-white"></div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-lg font-medium text-slate-900 mb-2">
+                      {currentQ.optionB.text}
+                    </p>
+                    <p className="text-sm text-slate-600">
+                      This choice indicates a preference for {getDimensionName(currentQ.optionB.value)}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Navigation Buttons */}
-        <div className="flex justify-between">
-          <button
-            onClick={prevQuestion}
+        {/* Navigation */}
+        <div className="flex justify-between items-center">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentQuestion(prev => Math.max(0, prev - 1))}
             disabled={currentQuestion === 0}
-            className={`px-6 py-2 rounded transition ${
-              currentQuestion === 0
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-gray-600 text-white hover:bg-gray-700'
-            }`}
+            className="px-6"
           >
             Previous
-          </button>
+          </Button>
 
-          {isLastQuestion ? (
-            <button
-              onClick={submitQuiz}
-              disabled={!allQuestionsAnswered || isSubmitting}
-              className={`px-6 py-2 rounded transition ${
-                !allQuestionsAnswered || isSubmitting
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-pink-600 text-white hover:bg-pink-700'
-              }`}
-            >
-              {isSubmitting ? 'Submitting...' : 'Submit Quiz'}
-            </button>
-          ) : (
-            <button
-              onClick={nextQuestion}
-              disabled={!answers[question.dimension]}
-              className={`px-6 py-2 rounded transition ${
-                !answers[question.dimension]
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-pink-600 text-white hover:bg-pink-700'
-              }`}
-            >
-              Next
-            </button>
-          )}
+          <div className="flex space-x-2">
+            {mbtiQuestions.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentQuestion(index)}
+                className={`w-3 h-3 rounded-full transition-colors ${
+                  index === currentQuestion
+                    ? 'bg-indigo-600'
+                    : answers[index.toString()]
+                    ? 'bg-indigo-300'
+                    : 'bg-slate-300'
+                }`}
+              />
+            ))}
+          </div>
+
+          <Button
+            onClick={() => setCurrentQuestion(prev => Math.min(mbtiQuestions.length - 1, prev + 1))}
+            disabled={currentQuestion === mbtiQuestions.length - 1}
+            className="px-6"
+          >
+            Next
+          </Button>
         </div>
 
-        {/* Home Link */}
-        <div className="mt-8">
-          <a 
+        {/* Submit Section */}
+        {currentQuestion === mbtiQuestions.length - 1 && (
+          <Card className="mt-8 border-indigo-200 bg-indigo-50">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                  Ready to Discover Your Type?
+                </h3>
+                <p className="text-slate-600 mb-6">
+                  You've answered all questions. Click below to get your personalized MBTI results.
+                </p>
+                {error && (
+                  <p className="text-red-600 mb-4">{error}</p>
+                )}
+                <Button
+                  onClick={handleSubmit}
+                  loading={isSubmitting}
+                  size="lg"
+                  variant="gradient"
+                  className="px-8 py-4 text-lg"
+                >
+                  {isSubmitting ? 'Analyzing...' : 'Get My Results'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Back to Home */}
+        <div className="text-center mt-8">
+          <a
             href="/"
-            className="text-pink-600 hover:text-pink-700 underline"
+            className="text-slate-600 hover:text-slate-900 underline transition-colors"
           >
-            Back to Home
+            ← Back to Home
           </a>
         </div>
       </div>
-    </main>
+    </div>
   );
 } 

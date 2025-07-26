@@ -61,28 +61,22 @@ export default function SentimentChart() {
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold mb-4">Journal Sentiment (Last 7 Days)</h3>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold mb-4">Journal Sentiment (Last 7 Days)</h3>
-        <div className="text-center text-gray-500 py-8">
-          <p>{error}</p>
-          <button 
-            onClick={fetchSentimentData}
-            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Retry
-          </button>
-        </div>
+      <div className="text-center text-slate-500 py-8">
+        <p className="mb-3">{error}</p>
+        <button 
+          onClick={fetchSentimentData}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -99,7 +93,7 @@ export default function SentimentChart() {
   // Sentiment color mapping
   const sentimentColors = sentimentData.map(item => {
     switch (item.sentiment) {
-      case 'positive': return '#10B981'; // green
+      case 'positive': return '#10B981'; // emerald
       case 'negative': return '#EF4444'; // red
       default: return '#6B7280'; // gray
     }
@@ -111,15 +105,16 @@ export default function SentimentChart() {
       {
         label: 'Motivation Level (1-5)',
         data: motivationData,
-        borderColor: '#3B82F6',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderColor: '#6366F1', // indigo
+        backgroundColor: 'rgba(99, 102, 241, 0.1)',
         borderWidth: 3,
         fill: true,
         tension: 0.4,
         pointBackgroundColor: sentimentColors,
         pointBorderColor: sentimentColors,
-        pointRadius: 6,
-        pointHoverRadius: 8,
+        pointRadius: 8,
+        pointHoverRadius: 12,
+        pointBorderWidth: 2,
       },
     ],
   };
@@ -130,10 +125,11 @@ export default function SentimentChart() {
       {
         label: 'Journal Entries',
         data: entryCountData,
-        backgroundColor: 'rgba(99, 102, 241, 0.8)',
-        borderColor: '#6366F1',
+        backgroundColor: 'rgba(16, 185, 129, 0.8)', // emerald
+        borderColor: '#10B981',
         borderWidth: 1,
-        borderRadius: 4,
+        borderRadius: 6,
+        borderSkipped: false,
       },
     ],
   };
@@ -145,8 +141,23 @@ export default function SentimentChart() {
       legend: {
         display: true,
         position: 'top' as const,
+        labels: {
+          usePointStyle: true,
+          padding: 20,
+          font: {
+            size: 14,
+            weight: 'bold' as const,
+          },
+        },
       },
       tooltip: {
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        titleColor: '#1F2937',
+        bodyColor: '#374151',
+        borderColor: '#E5E7EB',
+        borderWidth: 1,
+        cornerRadius: 8,
+        displayColors: true,
         callbacks: {
           afterLabel: function(context: any) {
             const index = context.dataIndex;
@@ -162,6 +173,22 @@ export default function SentimentChart() {
         max: 5,
         ticks: {
           stepSize: 1,
+          font: {
+            size: 12,
+          },
+        },
+        grid: {
+          color: 'rgba(0, 0, 0, 0.05)',
+        },
+      },
+      x: {
+        ticks: {
+          font: {
+            size: 12,
+          },
+        },
+        grid: {
+          color: 'rgba(0, 0, 0, 0.05)',
         },
       },
     },
@@ -174,6 +201,14 @@ export default function SentimentChart() {
       legend: {
         display: true,
         position: 'top' as const,
+        labels: {
+          usePointStyle: true,
+          padding: 20,
+          font: {
+            size: 14,
+            weight: 'bold' as const,
+          },
+        },
       },
     },
     scales: {
@@ -181,6 +216,22 @@ export default function SentimentChart() {
         beginAtZero: true,
         ticks: {
           stepSize: 1,
+          font: {
+            size: 12,
+          },
+        },
+        grid: {
+          color: 'rgba(0, 0, 0, 0.05)',
+        },
+      },
+      x: {
+        ticks: {
+          font: {
+            size: 12,
+          },
+        },
+        grid: {
+          color: 'rgba(0, 0, 0, 0.05)',
         },
       },
     },
@@ -192,38 +243,38 @@ export default function SentimentChart() {
     : '0';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-4">
-          <div className="text-2xl font-bold">{totalEntries}</div>
-          <div className="text-sm opacity-90">Total Entries</div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-xl p-6 shadow-lg">
+          <div className="text-3xl font-bold mb-2">{totalEntries}</div>
+          <div className="text-indigo-100 text-sm font-medium">Total Entries</div>
         </div>
-        <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg p-4">
-          <div className="text-2xl font-bold">{avgMotivation}</div>
-          <div className="text-sm opacity-90">Avg Motivation</div>
+        <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white rounded-xl p-6 shadow-lg">
+          <div className="text-3xl font-bold mb-2">{avgMotivation}</div>
+          <div className="text-emerald-100 text-sm font-medium">Avg Motivation</div>
         </div>
-        <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg p-4">
-          <div className="text-2xl font-bold">{sentimentData.filter(item => item.entryCount > 0).length}</div>
-          <div className="text-sm opacity-90">Active Days</div>
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-xl p-6 shadow-lg">
+          <div className="text-3xl font-bold mb-2">{sentimentData.filter(item => item.entryCount > 0).length}</div>
+          <div className="text-purple-100 text-sm font-medium">Active Days</div>
         </div>
       </div>
 
       {/* Motivation Chart */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold mb-4">Motivation Level Trend</h3>
-        <div className="h-64">
+      <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+        <h3 className="text-xl font-semibold text-slate-900 mb-4">Motivation Level Trend</h3>
+        <div className="h-80">
           <Line data={motivationChartData} options={chartOptions} />
         </div>
-        <p className="text-sm text-gray-600 mt-2">
+        <p className="text-sm text-slate-600 mt-4 text-center">
           Point colors indicate daily sentiment: 🟢 Positive, 🔴 Negative, ⚪ Neutral
         </p>
       </div>
 
       {/* Entry Count Chart */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold mb-4">Daily Journal Entries</h3>
-        <div className="h-64">
+      <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+        <h3 className="text-xl font-semibold text-slate-900 mb-4">Daily Journal Entries</h3>
+        <div className="h-80">
           <Bar data={entryCountChartData} options={barOptions} />
         </div>
       </div>

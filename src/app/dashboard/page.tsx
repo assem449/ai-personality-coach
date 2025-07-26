@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/Button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import SentimentChart from '@/components/SentimentChart';
 import DashboardRecommendations from '@/components/DashboardRecommendations';
 
@@ -55,172 +57,230 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-        <div className="container mx-auto py-8">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-teal-50">
+        <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-        <div className="container mx-auto py-8">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-teal-50">
+        <div className="container mx-auto px-4 py-8">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-800 mb-4">Dashboard</h1>
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
-              <p className="text-red-600 mb-4">{error}</p>
-              <button 
-                onClick={loadUserProfile}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-              >
-                Retry
-              </button>
-            </div>
+            <h1 className="text-2xl font-bold text-slate-900 mb-4">Dashboard</h1>
+            <Card className="max-w-md mx-auto">
+              <CardContent className="pt-6">
+                <p className="text-red-600 mb-4">{error}</p>
+                <Button 
+                  onClick={loadUserProfile}
+                  variant="outline"
+                >
+                  Retry
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
   if (!userProfile) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-        <div className="container mx-auto py-8">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-teal-50">
+        <div className="container mx-auto px-4 py-8">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-800 mb-4">Dashboard</h1>
-            <p className="text-gray-600">No user profile found.</p>
+            <h1 className="text-2xl font-bold text-slate-900 mb-4">Dashboard</h1>
+            <p className="text-slate-600">No user profile found.</p>
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-      <div className="container mx-auto py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-teal-50">
+      <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome back, {userProfile.name}!</h1>
-          <p className="text-gray-600">Your personalized dashboard with insights and recommendations</p>
+          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-2">
+            Welcome back, {userProfile.name}! 👋
+          </h1>
+          <p className="text-xl text-slate-600">
+            Your personalized dashboard with insights and recommendations
+          </p>
         </div>
 
         {/* MBTI Profile Section */}
         <div className="mb-8">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center">
-              <span className="text-purple-600 mr-2">🧠</span>
-              Your MBTI Profile
-            </h2>
-            
-            {userProfile.hasMBTIProfile ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-purple-600 mb-2">
-                    {userProfile.mbtiType}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center text-2xl">
+                <span className="text-3xl mr-3">🧠</span>
+                Your MBTI Profile
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {userProfile.hasMBTIProfile ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="text-center p-6 rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200">
+                    <div className="text-4xl font-bold text-indigo-600 mb-2">
+                      {userProfile.mbtiType}
+                    </div>
+                    <div className="text-sm text-slate-600">Personality Type</div>
                   </div>
-                  <div className="text-sm text-gray-600">Personality Type</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-600 mb-2">
-                    {userProfile.mbtiConfidence}%
+                  <div className="text-center p-6 rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200">
+                    <div className="text-4xl font-bold text-teal-600 mb-2">
+                      {userProfile.mbtiConfidence}%
+                    </div>
+                    <div className="text-sm text-slate-600">Assessment Confidence</div>
                   </div>
-                  <div className="text-sm text-gray-600">Assessment Confidence</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-semibold text-gray-800 mb-2">
-                    {userProfile.mbtiAssessmentDate ? 
-                      new Date(userProfile.mbtiAssessmentDate).toLocaleDateString() : 
-                      'N/A'
-                    }
+                  <div className="text-center p-6 rounded-xl bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200">
+                    <div className="text-lg font-semibold text-slate-800 mb-2">
+                      {userProfile.mbtiAssessmentDate ? 
+                        new Date(userProfile.mbtiAssessmentDate).toLocaleDateString() : 
+                        'N/A'
+                      }
+                    </div>
+                    <div className="text-sm text-slate-600">Assessment Date</div>
                   </div>
-                  <div className="text-sm text-gray-600">Assessment Date</div>
                 </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <div className="text-6xl mb-4">🧠</div>
-                <h3 className="text-lg font-semibold mb-2">Complete Your MBTI Assessment</h3>
-                <p className="text-gray-600 mb-4">
-                  Take the personality quiz to unlock personalized insights and recommendations.
-                </p>
-                <button
-                  onClick={handleTakeQuiz}
-                  className="inline-block px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                >
-                  Take MBTI Quiz
-                </button>
-              </div>
-            )}
-          </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="text-6xl mb-6">🧠</div>
+                  <h3 className="text-2xl font-semibold text-slate-900 mb-4">
+                    Complete Your MBTI Assessment
+                  </h3>
+                  <p className="text-slate-600 mb-8 max-w-md mx-auto">
+                    Take the personality quiz to unlock personalized insights, 
+                    recommendations, and a deeper understanding of yourself.
+                  </p>
+                  <Button
+                    onClick={handleTakeQuiz}
+                    size="lg"
+                    variant="gradient"
+                    className="px-8 py-4 text-lg"
+                  >
+                    Take MBTI Quiz
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Sentiment Chart Section - Only show if MBTI profile exists */}
         {userProfile.hasMBTIProfile && (
           <div className="mb-8">
-            <SentimentChart />
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center text-2xl">
+                  <span className="text-3xl mr-3">📊</span>
+                  Your Journal Insights
+                </CardTitle>
+                <CardDescription>
+                  Track your mood and motivation patterns over time
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SentimentChart />
+              </CardContent>
+            </Card>
           </div>
         )}
 
         {/* AI Recommendations Section - Only show if MBTI profile exists */}
         {userProfile.hasMBTIProfile && (
           <div className="mb-8">
-            <DashboardRecommendations />
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center text-2xl">
+                  <span className="text-3xl mr-3">🤖</span>
+                  AI-Powered Recommendations
+                </CardTitle>
+                <CardDescription>
+                  Personalized suggestions based on your personality and patterns
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DashboardRecommendations />
+              </CardContent>
+            </Card>
           </div>
         )}
 
         {/* Quick Actions */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <a
-              href="/journal"
-              className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
-            >
-              <span className="text-2xl mr-3">📝</span>
-              <div>
-                <div className="font-medium">Journal Entry</div>
-                <div className="text-sm text-gray-600">Write today's reflection</div>
+        <div className="mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl">Quick Actions</CardTitle>
+              <CardDescription>
+                Access your tools and features
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <a
+                  href="/journal"
+                  className="group flex items-center p-6 border border-slate-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50 transition-all duration-200"
+                >
+                  <div className="w-12 h-12 rounded-lg bg-indigo-100 flex items-center justify-center mr-4 group-hover:bg-indigo-200 transition-colors">
+                    <span className="text-2xl">📝</span>
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-900">Journal Entry</div>
+                    <div className="text-sm text-slate-600">Write today's reflection</div>
+                  </div>
+                </a>
+                <a
+                  href="/habits"
+                  className="group flex items-center p-6 border border-slate-200 rounded-xl hover:border-teal-300 hover:bg-teal-50 transition-all duration-200"
+                >
+                  <div className="w-12 h-12 rounded-lg bg-teal-100 flex items-center justify-center mr-4 group-hover:bg-teal-200 transition-colors">
+                    <span className="text-2xl">✅</span>
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-900">Habit Tracker</div>
+                    <div className="text-sm text-slate-600">Track your daily habits</div>
+                  </div>
+                </a>
+                {userProfile.hasMBTIProfile && (
+                  <a
+                    href="/recommendations"
+                    className="group flex items-center p-6 border border-slate-200 rounded-xl hover:border-purple-300 hover:bg-purple-50 transition-all duration-200"
+                  >
+                    <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center mr-4 group-hover:bg-purple-200 transition-colors">
+                      <span className="text-2xl">🤖</span>
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-900">AI Insights</div>
+                      <div className="text-sm text-slate-600">Get personalized recommendations</div>
+                    </div>
+                  </a>
+                )}
               </div>
-            </a>
-            <a
-              href="/habits"
-              className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors"
-            >
-              <span className="text-2xl mr-3">✅</span>
-              <div>
-                <div className="font-medium">Habit Tracker</div>
-                <div className="text-sm text-gray-600">Track your daily habits</div>
-              </div>
-            </a>
-            {userProfile.hasMBTIProfile && (
-              <a
-                href="/recommendations"
-                className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
-              >
-                <span className="text-2xl mr-3">🤖</span>
-                <div>
-                  <div className="font-medium">AI Insights</div>
-                  <div className="text-sm text-gray-600">Get personalized recommendations</div>
-                </div>
-              </a>
-            )}
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Back to Home */}
-        <div className="text-center mt-8">
+        <div className="text-center">
           <a
             href="/"
-            className="text-blue-600 hover:text-blue-700 underline"
+            className="inline-flex items-center text-slate-600 hover:text-slate-900 underline transition-colors"
           >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
             Back to Home
           </a>
         </div>
       </div>
-    </main>
+    </div>
   );
 } 
