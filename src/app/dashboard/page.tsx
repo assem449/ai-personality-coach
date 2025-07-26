@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import SentimentChart from '@/components/SentimentChart';
+import DashboardChart from '@/components/DashboardChart';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import MBTIResult from '@/components/MBTIResult';
 import { useAuth } from '@/hooks/useAuth';
@@ -94,7 +94,7 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-2">
-            Welcome back {userProfile.name}! 👋
+            Welcome {userProfile.name}! 👋
           </h1>
           <p className="text-xl text-slate-600">
             Your personalized dashboard with insights and recommendations
@@ -106,25 +106,10 @@ export default function DashboardPage() {
           <MBTIResult onRetake={handleTakeQuiz} showRetakeButton={false} />
         </div>
 
-        {/* Sentiment Chart Section - Only show if MBTI profile exists */}
-        {userProfile.hasMBTIProfile && (
-          <div className="mb-8">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center text-2xl">
-                  <span className="text-3xl mr-3">📊</span>
-                  Your Journal Insights
-                </CardTitle>
-                <CardDescription>
-                  Track your mood and motivation patterns over time
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <SentimentChart />
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        {/* Progress Chart Section */}
+        <div className="mb-8">
+          <DashboardChart />
+        </div>
 
         {/* Quick Actions */}
         <div className="mb-8">

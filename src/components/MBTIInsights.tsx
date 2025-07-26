@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { useRouter } from 'next/navigation';
+import GeminiBadge from '@/components/GeminiBadge';
 
 interface MBTIInsights {
   careers: string[];
@@ -109,6 +110,9 @@ export default function MBTIInsights({ mbtiType, onRetake }: MBTIInsightsProps) 
     <div className="space-y-8">
       {/* Header */}
       <div className="text-center">
+        <div className="flex justify-center mb-4">
+          <GeminiBadge />
+        </div>
         <div className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full mb-4">
           <span className="text-2xl font-bold text-indigo-900 mr-3">{mbtiType}</span>
           <span className="text-indigo-700">Your Personality Type</span>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import GeminiBadge from '@/components/GeminiBadge';
 
 export default function GeminiTestPage() {
   const [prompt, setPrompt] = useState('');
@@ -60,6 +61,9 @@ export default function GeminiTestPage() {
     <main className="min-h-screen bg-gradient-to-b from-blue-50 to-indigo-100 p-8">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <GeminiBadge />
+          </div>
           <h1 className="text-4xl font-bold text-gray-800 mb-2">Gemini AI Test</h1>
           <p className="text-gray-600">Test the various Gemini AI functions</p>
         </div>

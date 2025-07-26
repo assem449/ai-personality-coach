@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import GeminiBadge from '@/components/GeminiBadge';
 
 interface HabitRecommendation {
   title: string;
@@ -241,7 +242,10 @@ export default function RecommendationsTest() {
   return (
     <div className="max-w-6xl mx-auto p-6">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">{pageContent.title}</h2>
+        <div className="flex items-center gap-3 mb-3">
+          <h2 className="text-2xl font-bold text-gray-800">{pageContent.title}</h2>
+          <GeminiBadge />
+        </div>
         <p className="text-gray-600">{pageContent.description}</p>
       </div>
 

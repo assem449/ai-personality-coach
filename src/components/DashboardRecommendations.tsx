@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
+import GeminiBadge from '@/components/GeminiBadge';
 
 interface Recommendation {
   title: string;
@@ -239,9 +240,12 @@ export default function DashboardRecommendations() {
       >
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
           <div>
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">
-              ✨ Personalized Insights for {recommendations.context.mbtiType}
-            </h2>
+            <div className="flex items-center gap-3 mb-3">
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
+                ✨ Personalized Insights for {recommendations.context.mbtiType}
+              </h2>
+              <GeminiBadge />
+            </div>
             <p className="text-lg text-slate-600 max-w-2xl">
               AI-powered recommendations tailored to your personality and patterns
             </p>

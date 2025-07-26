@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import GeminiBadge from '@/components/GeminiBadge';
 
 interface JournalEntry {
   id: string;
@@ -153,7 +154,10 @@ export default function JournalForm() {
       {/* AI Analysis Display */}
       {showAnalysis && recentEntry?.aiAnalysis && (
         <div className="mb-6 p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
-          <h3 className="text-lg font-semibold text-purple-800 mb-4">🤖 AI Analysis</h3>
+          <div className="flex items-center gap-3 mb-4">
+            <h3 className="text-lg font-semibold text-purple-800">🤖 AI Analysis</h3>
+            <GeminiBadge />
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div className="bg-white p-4 rounded-lg">
