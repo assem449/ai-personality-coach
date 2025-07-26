@@ -8,6 +8,7 @@ export default function Home() {
         <div className="flex flex-col gap-4 items-center">
           <a href="/quiz" className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">Take the MBTI Quiz</a>
           <a href="/dashboard" className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition">Go to Dashboard</a>
+          <a href="/habits" className="px-6 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition">Habit Tracker</a>
           <a href="/journal" className="px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition">Daily Journal</a>
           
           <div className="flex gap-4">
