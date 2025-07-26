@@ -5,12 +5,18 @@ export interface IJournalEntry extends Document {
   date: Date;
   title: string;
   content: string;
-  mood: {
-    rating: number; // 1-10 scale
-    description: string;
-  };
+  mood: string;
   tags: string[];
   isPrivate: boolean;
+  // AI Analysis fields
+  aiAnalysis?: {
+    sentiment: 'positive' | 'neutral' | 'negative';
+    motivationLevel: number; // 1-5 scale
+    summary: string;
+    insights: string[];
+    moodKeywords: string[];
+    analyzedAt: Date;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,16 +43,9 @@ const JournalEntrySchema = new Schema<IJournalEntry>({
     maxlength: 10000,
   },
   mood: {
-    rating: {
-      type: Number,
-      required: true,
-      min: 1,
-      max: 10,
-    },
-    description: {
-      type: String,
-      maxlength: 100,
-    },
+    type: String,
+    required: true,
+    enum: ['happy', 'sad', 'excited', 'anxious', 'calm', 'frustrated', 'grateful', 'stressed', 'content', 'other'],
   },
   tags: [{
     type: String,
@@ -54,14 +53,43 @@ const JournalEntrySchema = new Schema<IJournalEntry>({
   }],
   isPrivate: {
     type: Boolean,
-    default: true,
+    default: false,
+  },
+  aiAnalysis: {
+    sentiment: {
+      type: String,
+      enum: ['positive', 'neutral', 'negative'],
+    },
+    motivationLevel: {
+      type: Number,
+      min: 1,
+      max: 5,
+    },
+    summary: {
+      type: String,
+      maxlength: 500,
+    },
+    insights: [{
+      type: String,
+      maxlength: 200,
+    }],
+    moodKeywords: [{
+      type: String,
+      maxlength: 50,
+    }],
+    analyzedAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
 }, {
   timestamps: true,
 });
 
-// Create compound index for efficient queries
+// Create indexes for efficient queries
 JournalEntrySchema.index({ userId: 1, date: -1 });
-JournalEntrySchema.index({ userId: 1, tags: 1 });
+JournalEntrySchema.index({ userId: 1, mood: 1 });
+JournalEntrySchema.index({ userId: 1, 'aiAnalysis.sentiment': 1 });
+JournalEntrySchema.index({ userId: 1, isPrivate: 1 });
 
 export default mongoose.models.JournalEntry || mongoose.model<IJournalEntry>('JournalEntry', JournalEntrySchema); 

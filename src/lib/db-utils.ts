@@ -1,5 +1,6 @@
 import connectDB from './mongodb';
 import { User, JournalEntry, MBTIProfile, Habit } from '@/models';
+import type { IUser, IJournalEntry, IMBTIProfile, IHabit } from '@/models';
 
 export async function ensureUser(auth0Id: string, userData: {
   email: string;
@@ -32,12 +33,20 @@ export async function getUserById(userId: string) {
   return await User.findById(userId);
 }
 
-export async function getJournalEntries(userId: string, limit = 10, skip = 0) {
+export async function getJournalEntries(
+  userId: string,
+  limit: number = 10,
+  page: number = 1
+): Promise<IJournalEntry[]> {
   await connectDB();
+  
+  const skip = (page - 1) * limit;
+  
   return await JournalEntry.find({ userId })
     .sort({ date: -1 })
+    .skip(skip)
     .limit(limit)
-    .skip(skip);
+    .exec();
 }
 
 export async function getMBTIProfile(userId: string) {
@@ -54,18 +63,31 @@ export async function getHabits(userId: string, activeOnly = true) {
   return await Habit.find(query).sort({ createdAt: -1 });
 }
 
-export async function createJournalEntry(userId: string, entryData: {
-  title: string;
-  content: string;
-  mood: { rating: number; description?: string };
-  tags?: string[];
-  isPrivate?: boolean;
-}) {
+export async function createJournalEntry(
+  userId: string,
+  data: {
+    title: string;
+    content: string;
+    mood: string;
+    tags?: string[];
+    isPrivate?: boolean;
+    aiAnalysis?: {
+      sentiment: 'positive' | 'neutral' | 'negative';
+      motivationLevel: number;
+      summary: string;
+      insights: string[];
+      moodKeywords: string[];
+    };
+  }
+): Promise<IJournalEntry> {
   await connectDB();
-  return await JournalEntry.create({
+  
+  const entry = new JournalEntry({
     userId,
-    ...entryData,
+    ...data,
   });
+  
+  return await entry.save();
 }
 
 export async function updateMBTIProfile(userId: string, profileData: {

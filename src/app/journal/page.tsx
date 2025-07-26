@@ -1,13 +1,26 @@
 "use client";
 
+import JournalForm from '@/components/JournalForm';
+
 export default function JournalPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-purple-100 to-purple-300">
-      <div className="text-center p-8 rounded-lg shadow-lg bg-white/80 max-w-lg w-full">
-        <h1 className="text-3xl font-bold mb-4 text-purple-700">Daily Journal</h1>
-        <p className="text-gray-700 mb-6">Reflect on your day and track your personal growth.</p>
-        {/* TODO: Implement journal entry form */}
-        <div className="border border-dashed border-purple-400 p-6 rounded bg-purple-50 text-purple-600">Journal entry form coming soon!</div>
+    <main className="min-h-screen bg-gradient-to-b from-purple-50 to-blue-50">
+      <div className="container mx-auto py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">Daily Journal</h1>
+          <p className="text-gray-600">Reflect on your day and get AI-powered insights about your mood and motivation</p>
+        </div>
+        
+        <JournalForm />
+        
+        <div className="text-center mt-8">
+          <a 
+            href="/"
+            className="text-purple-600 hover:text-purple-700 underline"
+          >
+            Back to Home
+          </a>
+        </div>
       </div>
     </main>
   );

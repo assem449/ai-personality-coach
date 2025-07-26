@@ -11,10 +11,90 @@ export interface JournalAnalysis {
   moodKeywords: string[];
 }
 
+/**
+ * General-purpose function to generate text using Gemini AI
+ * @param prompt - The prompt string to send to Gemini
+ * @param options - Optional configuration
+ * @returns Generated text response
+ */
+export async function generateText(
+  prompt: string, 
+  options: {
+    model?: 'gemini-pro' | 'gemini-pro-vision';
+    temperature?: number;
+    maxTokens?: number;
+  } = {}
+): Promise<string> {
+  try {
+    const { 
+      model = 'gemini-pro', 
+      temperature = 0.7, 
+      maxTokens = 1000 
+    } = options;
+
+    const geminiModel = genAI.getGenerativeModel({ 
+      model,
+      generationConfig: {
+        temperature,
+        maxOutputTokens: maxTokens,
+      }
+    });
+
+    const result = await geminiModel.generateContent(prompt);
+    const response = await result.response;
+    return response.text().trim();
+  } catch (error) {
+    console.error('Gemini AI text generation error:', error);
+    throw new Error(`Failed to generate text: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Generate a response with structured JSON output
+ * @param prompt - The prompt string
+ * @param jsonSchema - Optional JSON schema description
+ * @returns Parsed JSON response
+ */
+export async function generateJSON(
+  prompt: string, 
+  jsonSchema?: string
+): Promise<any> {
+  try {
+    const fullPrompt = jsonSchema 
+      ? `${prompt}\n\nReturn ONLY a valid JSON object${jsonSchema ? ` following this schema: ${jsonSchema}` : ''}.`
+      : `${prompt}\n\nReturn ONLY a valid JSON object, no additional text.`;
+
+    const response = await generateText(fullPrompt, { temperature: 0.3 });
+    
+    // Clean the response and parse JSON
+    const cleanedText = response.replace(/```json\n?|\n?```/g, '').trim();
+    return JSON.parse(cleanedText);
+  } catch (error) {
+    console.error('Gemini AI JSON generation error:', error);
+    throw new Error(`Failed to generate JSON: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Generate creative content with higher temperature
+ * @param prompt - The creative prompt
+ * @returns Creative text response
+ */
+export async function generateCreativeText(prompt: string): Promise<string> {
+  return generateText(prompt, { temperature: 0.9, maxTokens: 1500 });
+}
+
+/**
+ * Generate factual/analytical content with lower temperature
+ * @param prompt - The analytical prompt
+ * @returns Factual text response
+ */
+export async function generateAnalyticalText(prompt: string): Promise<string> {
+  return generateText(prompt, { temperature: 0.2, maxTokens: 800 });
+}
+
 export async function analyzeJournalEntry(journalText: string): Promise<JournalAnalysis> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-
     const prompt = `
 Analyze the following journal entry and provide insights in JSON format:
 
@@ -40,13 +120,7 @@ Guidelines:
 Return ONLY the JSON object, no additional text.
 `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    // Clean the response and parse JSON
-    const cleanedText = text.replace(/```json\n?|\n?```/g, '').trim();
-    const analysis = JSON.parse(cleanedText) as JournalAnalysis;
+    const analysis = await generateJSON(prompt);
     
     // Validate the response
     if (!analysis.sentiment || !analysis.motivationLevel || !analysis.summary) {
@@ -56,7 +130,7 @@ Return ONLY the JSON object, no additional text.
     // Ensure motivation level is within bounds
     analysis.motivationLevel = Math.max(1, Math.min(5, analysis.motivationLevel));
     
-    return analysis;
+    return analysis as JournalAnalysis;
   } catch (error) {
     console.error('Gemini AI analysis error:', error);
     
@@ -73,8 +147,6 @@ Return ONLY the JSON object, no additional text.
 
 export async function generateJournalPrompt(mood: string, previousEntry?: string): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-
     const prompt = `
 Based on the user's current mood (${mood}) and their previous journal entry, suggest a thoughtful journaling prompt.
 
@@ -86,9 +158,7 @@ The prompt should be 1-2 sentences and feel personal and supportive.
 Return ONLY the prompt text, no additional formatting.
 `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text().trim();
+    return await generateText(prompt, { temperature: 0.8 });
   } catch (error) {
     console.error('Error generating journal prompt:', error);
     return 'How are you feeling today? What would you like to reflect on?';
