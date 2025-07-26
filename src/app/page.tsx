@@ -10,6 +10,7 @@ export default function Home() {
           <a href="/dashboard" className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition">Go to Dashboard</a>
           <a href="/habits" className="px-6 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition">Habit Tracker</a>
           <a href="/journal" className="px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition">Daily Journal</a>
+          <a href="/recommendations" className="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">AI Recommendations</a>
           
           <div className="flex gap-4">
             <a href="/api/auth/login" className="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">Login</a>

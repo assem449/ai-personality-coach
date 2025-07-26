@@ -1,33 +1,25 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IHabit extends Document {
-  userId: mongoose.Types.ObjectId;
+  userId: string; // Auth0 user ID
   title: string;
-  description: string;
-  category: 'health' | 'productivity' | 'learning' | 'social' | 'mindfulness' | 'other';
+  description?: string;
+  category: string;
   frequency: 'daily' | 'weekly' | 'monthly';
-  goal: number; // Target number of completions
-  completed: number; // Current number of completions
-  streak: number; // Current streak count
-  longestStreak: number; // Longest streak achieved
   isActive: boolean;
-  startDate: Date;
-  endDate?: Date;
-  tracking?: Record<string, boolean>; // Daily tracking data
-  reminders: {
-    enabled: boolean;
-    time: string; // HH:MM format
-    days: number[]; // 0-6 (Sunday-Saturday)
-  };
+  completed: number;
+  streak: number;
+  longestStreak: number;
+  tracking: Record<string, boolean>; // Date string -> completion status
   createdAt: Date;
   updatedAt: Date;
 }
 
 const HabitSchema = new Schema<IHabit>({
   userId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
+    type: String,
     required: true,
+    index: true,
   },
   title: {
     type: String,
@@ -47,11 +39,11 @@ const HabitSchema = new Schema<IHabit>({
     type: String,
     required: true,
     enum: ['daily', 'weekly', 'monthly'],
+    default: 'daily',
   },
-  goal: {
-    type: Number,
-    required: true,
-    min: 1,
+  isActive: {
+    type: Boolean,
+    default: true,
   },
   completed: {
     type: Number,
@@ -68,36 +60,9 @@ const HabitSchema = new Schema<IHabit>({
     default: 0,
     min: 0,
   },
-  isActive: {
-    type: Boolean,
-    default: true,
-  },
-  startDate: {
-    type: Date,
-    required: true,
-    default: Date.now,
-  },
-  endDate: {
-    type: Date,
-  },
   tracking: {
-    type: Schema.Types.Mixed, // Store as object with date keys
+    type: Schema.Types.Mixed,
     default: {},
-  },
-  reminders: {
-    enabled: {
-      type: Boolean,
-      default: false,
-    },
-    time: {
-      type: String,
-      match: /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, // HH:MM format
-    },
-    days: [{
-      type: Number,
-      min: 0,
-      max: 6,
-    }],
   },
 }, {
   timestamps: true,
@@ -106,6 +71,6 @@ const HabitSchema = new Schema<IHabit>({
 // Create indexes for efficient queries
 HabitSchema.index({ userId: 1, isActive: 1 });
 HabitSchema.index({ userId: 1, category: 1 });
-HabitSchema.index({ userId: 1, startDate: -1 });
+HabitSchema.index({ userId: 1, createdAt: -1 });
 
 export default mongoose.models.Habit || mongoose.model<IHabit>('Habit', HabitSchema); 

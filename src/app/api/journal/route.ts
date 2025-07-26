@@ -1,32 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createJournalEntry, getJournalEntries, ensureUser } from '@/lib/db-utils';
+import { requireAuth, createAuthErrorResponse } from '@/lib/auth0-middleware';
+import { createJournalEntry, getJournalEntries } from '@/lib/db-utils';
 import { analyzeJournalEntry } from '@/lib/gemini';
 
 export async function POST(request: NextRequest) {
   try {
+    const { authUser } = await requireAuth(request);
     const { title, content, mood, tags, isPrivate } = await request.json();
-    
+
     if (!title || !content || !mood) {
       return NextResponse.json(
-        { error: 'Missing required fields: title, content, mood' },
+        { success: false, error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    // Create or get user (for demo purposes)
-    const user = await ensureUser('test-auth0-id', {
-      email: 'test@example.com',
-      name: 'Test User',
-      picture: 'https://via.placeholder.com/150'
-    });
+    // Analyze journal entry with AI
+    let aiAnalysis;
+    try {
+      aiAnalysis = await analyzeJournalEntry(content);
+    } catch (aiError) {
+      console.error('AI analysis failed:', aiError);
+      // Continue without AI analysis
+      aiAnalysis = {
+        sentiment: 'neutral' as const,
+        motivationLevel: 3,
+        summary: 'Analysis unavailable',
+        insights: ['Consider reflecting on your day'],
+        moodKeywords: ['reflective'],
+      };
+    }
 
-    // Analyze the journal entry using Gemini AI
-    console.log('Analyzing journal entry with AI...');
-    const aiAnalysis = await analyzeJournalEntry(content);
-    console.log('AI Analysis completed:', aiAnalysis);
-
-    // Create the journal entry with AI analysis
-    const journalEntry = await createJournalEntry(user._id.toString(), {
+    // Create journal entry
+    const journalEntry = await createJournalEntry(authUser.auth0Id, {
       title,
       content,
       mood,
@@ -42,16 +48,20 @@ export async function POST(request: NextRequest) {
         title: journalEntry.title,
         content: journalEntry.content,
         mood: journalEntry.mood,
-        tags: journalEntry.tags,
-        isPrivate: journalEntry.isPrivate,
-        date: journalEntry.date,
         aiAnalysis: journalEntry.aiAnalysis,
-      }
+        createdAt: journalEntry.createdAt,
+      },
     });
+
   } catch (error) {
     console.error('Journal creation error:', error);
+    
+    if (error instanceof Error && error.message === 'Authentication required') {
+      return createAuthErrorResponse();
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to create journal entry' },
+      { success: false, error: 'Failed to create journal entry' },
       { status: 500 }
     );
   }
@@ -59,19 +69,15 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const { authUser } = await requireAuth(request);
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const page = parseInt(searchParams.get('page') || '1');
-
-    // Create or get user (for demo purposes)
-    const user = await ensureUser('test-auth0-id', {
-      email: 'test@example.com',
-      name: 'Test User',
-      picture: 'https://via.placeholder.com/150'
-    });
-
-    const entries = await getJournalEntries(user._id.toString(), limit, page);
     
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const isPrivate = searchParams.get('private') === 'true';
+
+    const entries = await getJournalEntries(authUser.auth0Id, limit, page, isPrivate);
+
     return NextResponse.json({
       success: true,
       entries: entries.map(entry => ({
@@ -81,14 +87,25 @@ export async function GET(request: NextRequest) {
         mood: entry.mood,
         tags: entry.tags,
         isPrivate: entry.isPrivate,
-        date: entry.date,
         aiAnalysis: entry.aiAnalysis,
-      }))
+        createdAt: entry.createdAt,
+      })),
+      pagination: {
+        page,
+        limit,
+        total: entries.length,
+      },
     });
+
   } catch (error) {
     console.error('Journal retrieval error:', error);
+    
+    if (error instanceof Error && error.message === 'Authentication required') {
+      return createAuthErrorResponse();
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to retrieve journal entries' },
+      { success: false, error: 'Failed to retrieve journal entries' },
       { status: 500 }
     );
   }

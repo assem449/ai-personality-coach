@@ -1,68 +1,41 @@
 import connectDB from './mongodb';
-import { User, JournalEntry, MBTIProfile, Habit } from '@/models';
-import type { IUser, IJournalEntry, IMBTIProfile, IHabit } from '@/models';
+import User, { IUser } from '@/models/User';
+import JournalEntry, { IJournalEntry } from '@/models/JournalEntry';
+import MBTIProfile, { IMBTIProfile } from '@/models/MBTIProfile';
+import Habit, { IHabit } from '@/models/Habit';
 
-export async function ensureUser(auth0Id: string, userData: {
+/**
+ * Create or update a user in the database
+ */
+export async function createOrUpdateUser(userData: {
+  auth0Id: string;
   email: string;
   name: string;
   picture?: string;
-}) {
+  emailVerified?: boolean;
+}): Promise<IUser> {
   await connectDB();
   
-  let user = await User.findOne({ auth0Id });
-  
-  if (!user) {
-    user = await User.create({
-      auth0Id,
-      email: userData.email,
-      name: userData.name,
-      picture: userData.picture,
-    });
-  }
+  const user = await User.findOneAndUpdate(
+    { auth0Id: userData.auth0Id },
+    userData,
+    { upsert: true, new: true }
+  );
   
   return user;
 }
 
-export async function getUserByAuth0Id(auth0Id: string) {
+/**
+ * Get user by Auth0 ID
+ */
+export async function getUserByAuth0Id(auth0Id: string): Promise<IUser | null> {
   await connectDB();
   return await User.findOne({ auth0Id });
 }
 
-export async function getUserById(userId: string) {
-  await connectDB();
-  return await User.findById(userId);
-}
-
-export async function getJournalEntries(
-  userId: string,
-  limit: number = 10,
-  page: number = 1
-): Promise<IJournalEntry[]> {
-  await connectDB();
-  
-  const skip = (page - 1) * limit;
-  
-  return await JournalEntry.find({ userId })
-    .sort({ date: -1 })
-    .skip(skip)
-    .limit(limit)
-    .exec();
-}
-
-export async function getMBTIProfile(userId: string) {
-  await connectDB();
-  return await MBTIProfile.findOne({ userId });
-}
-
-export async function getHabits(userId: string, activeOnly = true) {
-  await connectDB();
-  const query: { userId: string; isActive?: boolean } = { userId };
-  if (activeOnly) {
-    query.isActive = true;
-  }
-  return await Habit.find(query).sort({ createdAt: -1 });
-}
-
+/**
+ * Create a journal entry
+ */
 export async function createJournalEntry(
   userId: string,
   data: {
@@ -82,41 +55,181 @@ export async function createJournalEntry(
 ): Promise<IJournalEntry> {
   await connectDB();
   
-  const entry = new JournalEntry({
+  const journalEntry = await JournalEntry.create({
     userId,
     ...data,
   });
   
-  return await entry.save();
+  return journalEntry;
 }
 
-export async function updateMBTIProfile(userId: string, profileData: {
-  mbtiType: string;
-  scores: any;
-  confidence: number;
-  questionsAnswered: number;
-  totalQuestions: number;
-  insights?: any;
-}) {
+/**
+ * Get journal entries for a user with pagination
+ */
+export async function getJournalEntries(
+  userId: string,
+  limit: number = 10,
+  page: number = 1,
+  isPrivate?: boolean
+): Promise<IJournalEntry[]> {
   await connectDB();
-  return await MBTIProfile.findOneAndUpdate(
+  
+  const skip = (page - 1) * limit;
+  const query: { userId: string; isPrivate?: boolean } = { userId };
+  
+  if (isPrivate !== undefined) {
+    query.isPrivate = isPrivate;
+  }
+  
+  return await JournalEntry.find(query)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+}
+
+/**
+ * Create or update MBTI profile
+ */
+export async function createOrUpdateMBTIProfile(
+  userId: string,
+  data: {
+    mbtiType: string;
+    confidence: number;
+    answers: Record<string, string>;
+  }
+): Promise<IMBTIProfile> {
+  await connectDB();
+  
+  const profile = await MBTIProfile.findOneAndUpdate(
     { userId },
-    { ...profileData, assessmentDate: new Date() },
+    {
+      ...data,
+      assessmentDate: new Date(),
+    },
     { upsert: true, new: true }
   );
+  
+  return profile;
 }
 
-export async function createHabit(userId: string, habitData: {
-  title: string;
-  description?: string;
-  category: string;
-  frequency: string;
-  goal: number;
-  reminders?: any;
-}) {
+/**
+ * Get MBTI profile for a user
+ */
+export async function getMBTIProfile(userId: string): Promise<IMBTIProfile | null> {
   await connectDB();
-  return await Habit.create({
+  return await MBTIProfile.findOne({ userId });
+}
+
+/**
+ * Create a habit
+ */
+export async function createHabit(
+  userId: string,
+  data: {
+    title: string;
+    description?: string;
+    category: string;
+    frequency: 'daily' | 'weekly' | 'monthly';
+  }
+): Promise<IHabit> {
+  await connectDB();
+  
+  const habit = await Habit.create({
     userId,
-    ...habitData,
+    ...data,
   });
+  
+  return habit;
+}
+
+/**
+ * Get habits for a user
+ */
+export async function getHabits(
+  userId: string,
+  isActive?: boolean
+): Promise<IHabit[]> {
+  await connectDB();
+  
+  const query: { userId: string; isActive?: boolean } = { userId };
+  
+  if (isActive !== undefined) {
+    query.isActive = isActive;
+  }
+  
+  return await Habit.find(query).sort({ createdAt: -1 });
+}
+
+/**
+ * Update habit tracking for a specific date
+ */
+export async function updateHabitTracking(
+  habitId: string,
+  userId: string,
+  date: string,
+  completed: boolean
+): Promise<IHabit | null> {
+  await connectDB();
+  
+  const habit = await Habit.findOne({ _id: habitId, userId });
+  
+  if (!habit) {
+    return null;
+  }
+  
+  // Update tracking data
+  habit.tracking = habit.tracking || {};
+  habit.tracking[date] = completed;
+  
+  // Recalculate stats
+  const trackingValues = Object.values(habit.tracking);
+  habit.completed = trackingValues.filter(Boolean).length;
+  
+  // Calculate current streak
+  let currentStreak = 0;
+  const sortedDates = Object.keys(habit.tracking).sort().reverse();
+  
+  for (const trackDate of sortedDates) {
+    if (habit.tracking[trackDate]) {
+      currentStreak++;
+    } else {
+      break;
+    }
+  }
+  
+  habit.streak = currentStreak;
+  habit.longestStreak = Math.max(habit.longestStreak, currentStreak);
+  
+  await habit.save();
+  return habit;
+}
+
+/**
+ * Get user's complete profile with all related data
+ */
+export async function getUserProfile(auth0Id: string): Promise<{
+  user: IUser;
+  mbtiProfile: IMBTIProfile | null;
+  recentJournalEntries: IJournalEntry[];
+  activeHabits: IHabit[];
+} | null> {
+  await connectDB();
+  
+  const user = await getUserByAuth0Id(auth0Id);
+  if (!user) {
+    return null;
+  }
+  
+  const [mbtiProfile, recentJournalEntries, activeHabits] = await Promise.all([
+    getMBTIProfile(auth0Id),
+    getJournalEntries(auth0Id, 5, 1),
+    getHabits(auth0Id, true),
+  ]);
+  
+  return {
+    user,
+    mbtiProfile,
+    recentJournalEntries,
+    activeHabits,
+  };
 } 

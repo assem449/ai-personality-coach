@@ -12,7 +12,31 @@ export interface JournalAnalysis {
 }
 
 /**
- * General-purpose function to generate text using Gemini AI
+ * Check if Gemini API is properly configured
+ */
+function isGeminiConfigured(): boolean {
+  return !!(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim() !== '');
+}
+
+/**
+ * Check if error is a rate limit error
+ */
+function isRateLimitError(error: any): boolean {
+  return error?.status === 429 || 
+         error?.message?.includes('Too Many Requests') ||
+         error?.message?.includes('rate limit') ||
+         error?.message?.includes('quota');
+}
+
+/**
+ * Wait for a specified number of milliseconds
+ */
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * General-purpose function to generate text using Gemini AI with retry logic
  * @param prompt - The prompt string to send to Gemini
  * @param options - Optional configuration
  * @returns Generated text response
@@ -20,17 +44,24 @@ export interface JournalAnalysis {
 export async function generateText(
   prompt: string, 
   options: {
-    model?: 'gemini-pro' | 'gemini-pro-vision';
+    model?: 'gemini-1.5-pro' | 'gemini-1.5-flash' | 'gemini-pro';
     temperature?: number;
     maxTokens?: number;
+    retries?: number;
   } = {}
 ): Promise<string> {
+  const { 
+    model = 'gemini-1.5-pro', 
+    temperature = 0.7, 
+    maxTokens = 1000,
+    retries = 2
+  } = options;
+
   try {
-    const { 
-      model = 'gemini-pro', 
-      temperature = 0.7, 
-      maxTokens = 1000 
-    } = options;
+    // Check if Gemini is configured
+    if (!isGeminiConfigured()) {
+      throw new Error('Gemini API key not configured');
+    }
 
     const geminiModel = genAI.getGenerativeModel({ 
       model,
@@ -40,11 +71,46 @@ export async function generateText(
       }
     });
 
-    const result = await geminiModel.generateContent(prompt);
-    const response = await result.response;
-    return response.text().trim();
+    let lastError: any;
+    
+    // Retry logic for rate limiting
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const result = await geminiModel.generateContent(prompt);
+        const response = await result.response;
+        return response.text().trim();
+      } catch (error) {
+        lastError = error;
+        
+        // If it's a rate limit error and we have retries left, wait and retry
+        if (isRateLimitError(error) && attempt < retries) {
+          const waitTime = Math.pow(2, attempt + 1) * 1000; // Exponential backoff: 2s, 4s, 8s
+          console.log(`Rate limit hit, waiting ${waitTime}ms before retry ${attempt + 1}/${retries}`);
+          await delay(waitTime);
+          continue;
+        }
+        
+        // If it's not a rate limit error or we're out of retries, break
+        break;
+      }
+    }
+    
+    // If we get here, all retries failed
+    throw lastError;
+    
   } catch (error) {
     console.error('Gemini AI text generation error:', error);
+    
+    // If it's a configuration error, provide helpful message
+    if (error instanceof Error && error.message.includes('API key')) {
+      throw new Error('Gemini API not configured. Please add GEMINI_API_KEY to your environment variables.');
+    }
+    
+    // If it's a rate limit error, provide helpful message
+    if (isRateLimitError(error)) {
+      throw new Error('Gemini API rate limit exceeded. Please wait a moment and try again, or upgrade your API quota.');
+    }
+    
     throw new Error(`Failed to generate text: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
@@ -71,6 +137,17 @@ export async function generateJSON(
     return JSON.parse(cleanedText);
   } catch (error) {
     console.error('Gemini AI JSON generation error:', error);
+    
+    // If it's a configuration error, provide helpful message
+    if (error instanceof Error && error.message.includes('not configured')) {
+      throw new Error('Gemini API not configured. Please add GEMINI_API_KEY to your environment variables.');
+    }
+    
+    // If it's a rate limit error, provide helpful message
+    if (isRateLimitError(error)) {
+      throw new Error('Gemini API rate limit exceeded. Please wait a moment and try again.');
+    }
+    
     throw new Error(`Failed to generate JSON: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

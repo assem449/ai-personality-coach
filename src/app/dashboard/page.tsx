@@ -1,107 +1,223 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import SentimentChart from '@/components/SentimentChart';
+import DashboardRecommendations from '@/components/DashboardRecommendations';
+
+interface UserProfile {
+  _id: string;
+  name: string;
+  email: string;
+  mbtiType?: string;
+  mbtiConfidence?: number;
+  mbtiAssessmentDate?: string;
+  hasMBTIProfile: boolean;
+}
 
 export default function DashboardPage() {
-  const searchParams = useSearchParams();
-  const [mbtiType, setMbtiType] = useState<string>('');
-  const [showQuizResult, setShowQuizResult] = useState(false);
+  const router = useRouter();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    // Check if user just completed the quiz
-    const quizCompleted = searchParams.get('quiz');
-    const quizType = searchParams.get('type');
-    
-    if (quizCompleted === 'completed' && quizType) {
-      setMbtiType(quizType);
-      setShowQuizResult(true);
-      
-      // Clear the URL parameters
-      window.history.replaceState({}, '', '/dashboard');
-    }
-  }, [searchParams]);
+    loadUserProfile();
+  }, []);
 
-  const getMBTIDescription = (type: string) => {
-    const descriptions: Record<string, string> = {
-      'INTJ': 'The Architect - Imaginative and strategic thinkers',
-      'INTP': 'The Logician - Innovative inventors with an unquenchable thirst for knowledge',
-      'ENTJ': 'The Commander - Bold, imaginative and strong-willed leaders',
-      'ENTP': 'The Debater - Smart and curious thinkers who cannot resist an intellectual challenge',
-      'INFJ': 'The Advocate - Quiet and mystical, yet very inspiring and tireless idealists',
-      'INFP': 'The Mediator - Poetic, kind and altruistic people, always eager to help a good cause',
-      'ENFJ': 'The Protagonist - Charismatic and inspiring leaders, able to mesmerize their listeners',
-      'ENFP': 'The Campaigner - Enthusiastic, creative and sociable free spirits',
-      'ISTJ': 'The Logistician - Practical and fact-minded individuals, whose reliability cannot be doubted',
-      'ISFJ': 'The Defender - Very dedicated and warm protectors, always ready to defend their loved ones',
-      'ESTJ': 'The Executive - Excellent administrators, unsurpassed at managing things or people',
-      'ESFJ': 'The Consul - Extraordinarily caring, social and popular people',
-      'ISTP': 'The Virtuoso - Bold and practical experimenters, masters of all kinds of tools',
-      'ISFP': 'The Adventurer - Flexible and charming artists, always ready to explore and experience something new',
-      'ESTP': 'The Entrepreneur - Smart, energetic and very perceptive people',
-      'ESFP': 'The Entertainer - Spontaneous, energetic and enthusiastic entertainers'
-    };
-    
-    return descriptions[type] || 'Your unique personality type';
+  const loadUserProfile = async () => {
+    try {
+      const response = await fetch('/api/user/profile');
+      const data = await response.json();
+
+      if (data.success) {
+        setUserProfile(data);
+        
+        // Simple protection: redirect to quiz if no MBTI profile
+        if (!data.hasMBTIProfile) {
+          // Don't redirect immediately, let user see the dashboard with quiz prompt
+          console.log('No MBTI profile found - showing quiz prompt');
+        }
+      } else {
+        setError(data.error || 'Failed to load user profile');
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      setError('Failed to load user profile');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-green-100 to-green-300">
-      <div className="text-center p-8 rounded-lg shadow-lg bg-white/80 max-w-lg w-full">
-        <h1 className="text-3xl font-bold mb-4 text-green-700">User Dashboard</h1>
-        
-        {/* Quiz Result Banner */}
-        {showQuizResult && mbtiType && (
-          <div className="mb-6 p-6 bg-gradient-to-r from-pink-100 to-purple-100 rounded-lg border-2 border-pink-200">
-            <h2 className="text-2xl font-bold text-pink-700 mb-2">
-              🎉 Quiz Completed!
-            </h2>
-            <p className="text-lg font-semibold text-purple-700 mb-2">
-              Your MBTI Type: <span className="text-pink-600">{mbtiType}</span>
-            </p>
-            <p className="text-gray-700 text-sm">
-              {getMBTIDescription(mbtiType)}
-            </p>
+  const handleTakeQuiz = () => {
+    router.push('/quiz');
+  };
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+        <div className="container mx-auto py-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           </div>
-        )}
-        
-        {/* User Profile Section */}
-        <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
-          <div className="flex items-center justify-center mb-4">
-            <div className="w-16 h-16 rounded-full border-2 border-green-300 bg-green-200 flex items-center justify-center">
-              <span className="text-green-600 text-xl">👤</span>
+        </div>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+        <div className="container mx-auto py-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-800 mb-4">Dashboard</h1>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
+              <p className="text-red-600 mb-4">{error}</p>
+              <button 
+                onClick={loadUserProfile}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Retry
+              </button>
             </div>
           </div>
-          <h2 className="text-xl font-semibold text-green-800 mb-2">
-            Welcome to your Dashboard!
-          </h2>
-          <p className="text-green-600">Please login to see your profile information</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!userProfile) {
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+        <div className="container mx-auto py-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-800 mb-4">Dashboard</h1>
+            <p className="text-gray-600">No user profile found.</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+      <div className="container mx-auto py-8 px-4">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome back, {userProfile.name}!</h1>
+          <p className="text-gray-600">Your personalized dashboard with insights and recommendations</p>
         </div>
 
-        <p className="text-gray-700 mb-6">Here you can view your MBTI results, track your progress, and more.</p>
-        
-        <div className="border border-dashed border-green-400 p-6 rounded bg-green-50 text-green-600 mb-4">
-          User stats and MBTI results coming soon!
+        {/* MBTI Profile Section */}
+        <div className="mb-8">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <span className="text-purple-600 mr-2">🧠</span>
+              Your MBTI Profile
+            </h2>
+            
+            {userProfile.hasMBTIProfile ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-purple-600 mb-2">
+                    {userProfile.mbtiType}
+                  </div>
+                  <div className="text-sm text-gray-600">Personality Type</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-green-600 mb-2">
+                    {userProfile.mbtiConfidence}%
+                  </div>
+                  <div className="text-sm text-gray-600">Assessment Confidence</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-semibold text-gray-800 mb-2">
+                    {userProfile.mbtiAssessmentDate ? 
+                      new Date(userProfile.mbtiAssessmentDate).toLocaleDateString() : 
+                      'N/A'
+                    }
+                  </div>
+                  <div className="text-sm text-gray-600">Assessment Date</div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-6xl mb-4">🧠</div>
+                <h3 className="text-lg font-semibold mb-2">Complete Your MBTI Assessment</h3>
+                <p className="text-gray-600 mb-4">
+                  Take the personality quiz to unlock personalized insights and recommendations.
+                </p>
+                <button
+                  onClick={handleTakeQuiz}
+                  className="inline-block px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  Take MBTI Quiz
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-        
-        <div className="flex gap-4 justify-center">
-          <a 
-            href="/quiz" 
-            className="px-4 py-2 bg-pink-600 text-white rounded hover:bg-pink-700 transition"
+
+        {/* Sentiment Chart Section - Only show if MBTI profile exists */}
+        {userProfile.hasMBTIProfile && (
+          <div className="mb-8">
+            <SentimentChart />
+          </div>
+        )}
+
+        {/* AI Recommendations Section - Only show if MBTI profile exists */}
+        {userProfile.hasMBTIProfile && (
+          <div className="mb-8">
+            <DashboardRecommendations />
+          </div>
+        )}
+
+        {/* Quick Actions */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <a
+              href="/journal"
+              className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+            >
+              <span className="text-2xl mr-3">📝</span>
+              <div>
+                <div className="font-medium">Journal Entry</div>
+                <div className="text-sm text-gray-600">Write today's reflection</div>
+              </div>
+            </a>
+            <a
+              href="/habits"
+              className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors"
+            >
+              <span className="text-2xl mr-3">✅</span>
+              <div>
+                <div className="font-medium">Habit Tracker</div>
+                <div className="text-sm text-gray-600">Track your daily habits</div>
+              </div>
+            </a>
+            {userProfile.hasMBTIProfile && (
+              <a
+                href="/recommendations"
+                className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+              >
+                <span className="text-2xl mr-3">🤖</span>
+                <div>
+                  <div className="font-medium">AI Insights</div>
+                  <div className="text-sm text-gray-600">Get personalized recommendations</div>
+                </div>
+              </a>
+            )}
+          </div>
+        </div>
+
+        {/* Back to Home */}
+        <div className="text-center mt-8">
+          <a
+            href="/"
+            className="text-blue-600 hover:text-blue-700 underline"
           >
-            Take MBTI Quiz
-          </a>
-          <a 
-            href="/api/auth/login" 
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
-          >
-            Login
-          </a>
-          <a 
-            href="/" 
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-          >
-            Home
+            Back to Home
           </a>
         </div>
       </div>

@@ -1,39 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createHabit, getHabits, ensureUser } from '@/lib/db-utils';
+import { requireAuth, createAuthErrorResponse } from '@/lib/auth0-middleware';
+import { createHabit, getHabits } from '@/lib/db-utils';
 
 export async function POST(request: NextRequest) {
   try {
-    const { title, description, category, frequency, goal } = await request.json();
-    
-    if (!title || !category || !frequency || !goal) {
+    const { authUser } = await requireAuth(request);
+    const { title, description, category, frequency } = await request.json();
+
+    if (!title || !category || !frequency) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { success: false, error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    // Create or get user (for demo purposes)
-    const user = await ensureUser('test-auth0-id', {
-      email: 'test@example.com',
-      name: 'Test User',
-      picture: 'https://via.placeholder.com/150'
-    });
-
-    // Check if user already has 3 habits
-    const existingHabits = await getHabits(user._id.toString(), true);
+    // Check if user already has 3 active habits
+    const existingHabits = await getHabits(authUser.auth0Id, true);
     if (existingHabits.length >= 3) {
       return NextResponse.json(
-        { error: 'Maximum 3 habits allowed' },
+        { success: false, error: 'Maximum 3 active habits allowed' },
         { status: 400 }
       );
     }
 
-    const habit = await createHabit(user._id.toString(), {
+    // Create new habit
+    const habit = await createHabit(authUser.auth0Id, {
       title,
-      description: description || '',
+      description,
       category,
       frequency,
-      goal: parseInt(goal),
     });
 
     return NextResponse.json({
@@ -44,16 +39,23 @@ export async function POST(request: NextRequest) {
         description: habit.description,
         category: habit.category,
         frequency: habit.frequency,
-        goal: habit.goal,
+        isActive: habit.isActive,
         completed: habit.completed,
         streak: habit.streak,
-        isActive: habit.isActive,
-      }
+        longestStreak: habit.longestStreak,
+        createdAt: habit.createdAt,
+      },
     });
+
   } catch (error) {
     console.error('Habit creation error:', error);
+    
+    if (error instanceof Error && error.message === 'Authentication required') {
+      return createAuthErrorResponse();
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to create habit' },
+      { success: false, error: 'Failed to create habit' },
       { status: 500 }
     );
   }
@@ -61,15 +63,13 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Create or get user (for demo purposes)
-    const user = await ensureUser('test-auth0-id', {
-      email: 'test@example.com',
-      name: 'Test User',
-      picture: 'https://via.placeholder.com/150'
-    });
-
-    const habits = await getHabits(user._id.toString(), true);
+    const { authUser } = await requireAuth(request);
+    const { searchParams } = new URL(request.url);
     
+    const isActive = searchParams.get('active') !== 'false'; // Default to active habits
+
+    const habits = await getHabits(authUser.auth0Id, isActive);
+
     return NextResponse.json({
       success: true,
       habits: habits.map(habit => ({
@@ -78,18 +78,24 @@ export async function GET(request: NextRequest) {
         description: habit.description,
         category: habit.category,
         frequency: habit.frequency,
-        goal: habit.goal,
+        isActive: habit.isActive,
         completed: habit.completed,
         streak: habit.streak,
         longestStreak: habit.longestStreak,
-        isActive: habit.isActive,
-        startDate: habit.startDate,
-      }))
+        tracking: habit.tracking,
+        createdAt: habit.createdAt,
+      })),
     });
+
   } catch (error) {
     console.error('Habit retrieval error:', error);
+    
+    if (error instanceof Error && error.message === 'Authentication required') {
+      return createAuthErrorResponse();
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to retrieve habits' },
+      { success: false, error: 'Failed to retrieve habits' },
       { status: 500 }
     );
   }

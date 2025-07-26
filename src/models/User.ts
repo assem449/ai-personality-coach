@@ -1,17 +1,13 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IUser extends Document {
-  auth0Id: string;
+  auth0Id: string; // Auth0's 'sub' field
   email: string;
   name: string;
   picture?: string;
-  mbtiType?: string;
+  emailVerified?: boolean;
   createdAt: Date;
   updatedAt: Date;
-  preferences: {
-    theme: 'light' | 'dark';
-    notifications: boolean;
-  };
 }
 
 const UserSchema = new Schema<IUser>({
@@ -19,12 +15,13 @@ const UserSchema = new Schema<IUser>({
     type: String,
     required: true,
     unique: true,
+    index: true,
   },
   email: {
     type: String,
     required: true,
     unique: true,
-    lowercase: true,
+    index: true,
   },
   name: {
     type: String,
@@ -33,31 +30,15 @@ const UserSchema = new Schema<IUser>({
   picture: {
     type: String,
   },
-  mbtiType: {
-    type: String,
-    enum: [
-      'INTJ', 'INTP', 'ENTJ', 'ENTP',
-      'INFJ', 'INFP', 'ENFJ', 'ENFP',
-      'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ',
-      'ISTP', 'ISFP', 'ESTP', 'ESFP'
-    ],
-  },
-  preferences: {
-    theme: {
-      type: String,
-      enum: ['light', 'dark'],
-      default: 'light',
-    },
-    notifications: {
-      type: Boolean,
-      default: true,
-    },
+  emailVerified: {
+    type: Boolean,
+    default: false,
   },
 }, {
   timestamps: true,
 });
 
-// Create indexes for better query performance
+// Ensure unique indexes
 UserSchema.index({ auth0Id: 1 });
 UserSchema.index({ email: 1 });
 

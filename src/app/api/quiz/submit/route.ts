@@ -1,80 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth, createAuthErrorResponse } from '@/lib/auth0-middleware';
+import { createOrUpdateMBTIProfile } from '@/lib/db-utils';
 import { calculateMBTI } from '@/data/mbti-questions';
-import { updateMBTIProfile, ensureUser } from '@/lib/db-utils';
-
-interface QuizSubmission {
-  answers: Record<string, string>;
-  userId?: string;
-}
 
 export async function POST(request: NextRequest) {
   try {
-    const { answers, userId }: QuizSubmission = await request.json();
-    
-    if (!answers) {
+    const { authUser } = await requireAuth(request);
+    const { answers } = await request.json();
+
+    if (!answers || typeof answers !== 'object') {
       return NextResponse.json(
-        { error: 'Missing answers' },
+        { success: false, error: 'Invalid answers format' },
         { status: 400 }
       );
     }
 
-    // Create or get user (for demo purposes, create a test user)
-    const user = await ensureUser('test-auth0-id', {
-      email: 'test@example.com',
-      name: 'Test User',
-      picture: 'https://via.placeholder.com/150'
-    });
-
     // Calculate MBTI type
     const mbtiType = calculateMBTI(answers);
     
-    // Calculate scores for each dimension
-    const scores = {
-      E: 0, I: 0,
-      S: 0, N: 0,
-      T: 0, F: 0,
-      J: 0, P: 0
-    };
-
-    Object.values(answers).forEach(answer => {
-      if (answer in scores) {
-        scores[answer as keyof typeof scores]++;
-      }
-    });
-
-    // Calculate confidence (simple percentage)
+    // Calculate confidence (simple percentage based on questions answered)
     const totalQuestions = 4;
-    const confidence = Math.round((totalQuestions / totalQuestions) * 100);
-
-    // Store in database using the user's ObjectId
-    const profile = await updateMBTIProfile(user._id.toString(), {
-      mbtiType,
-      scores,
-      confidence,
-      questionsAnswered: totalQuestions,
-      totalQuestions,
-      insights: {
-        strengths: [`Strong ${mbtiType} characteristics`],
-        weaknesses: [`Areas for growth in ${mbtiType} development`],
-        careerSuggestions: [`Careers suitable for ${mbtiType} types`],
-        relationshipAdvice: [`Relationship tips for ${mbtiType} personalities`]
-      }
+    const answeredQuestions = Object.keys(answers).length;
+    const confidence = Math.round((answeredQuestions / totalQuestions) * 100);
+    
+    // Store MBTI profile in database
+    const mbtiProfile = await createOrUpdateMBTIProfile(authUser.auth0Id, {
+      mbtiType: mbtiType,
+      confidence: confidence,
+      answers: answers,
     });
 
     return NextResponse.json({
       success: true,
-      mbtiType,
-      profile: {
-        id: profile._id,
-        mbtiType: profile.mbtiType,
-        confidence: profile.confidence,
-        assessmentDate: profile.assessmentDate
-      }
+      mbtiType: mbtiType,
+      confidence: confidence,
+      description: `Your MBTI type is ${mbtiType}`,
+      profileId: mbtiProfile._id,
     });
+
   } catch (error) {
     console.error('Quiz submission error:', error);
+    
+    if (error instanceof Error && error.message === 'Authentication required') {
+      return createAuthErrorResponse();
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to submit quiz' },
+      { success: false, error: 'Failed to submit quiz' },
       { status: 500 }
     );
   }

@@ -1,65 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/mongodb';
-import { Habit } from '@/models';
+import { requireAuth, createAuthErrorResponse } from '@/lib/auth0-middleware';
+import { updateHabitTracking } from '@/lib/db-utils';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    const { authUser } = await requireAuth(request);
     const { date, completed } = await request.json();
-    const habitId = params.id;
-    
+
     if (!date || typeof completed !== 'boolean') {
       return NextResponse.json(
-        { error: 'Missing date or completed status' },
+        { success: false, error: 'Missing required fields: date and completed' },
         { status: 400 }
       );
     }
 
-    await connectDB();
-    
-    // Find the habit
-    const habit = await Habit.findById(habitId);
+    const habit = await updateHabitTracking(params.id, authUser.auth0Id, date, completed);
+
     if (!habit) {
       return NextResponse.json(
-        { error: 'Habit not found' },
+        { success: false, error: 'Habit not found or access denied' },
         { status: 404 }
       );
     }
-
-    // Initialize tracking data if it doesn't exist
-    if (!habit.tracking) {
-      habit.tracking = {};
-    }
-
-    // Update tracking for the specific date
-    habit.tracking[date] = completed;
-
-    // Calculate new completion count
-    const completedDays = Object.values(habit.tracking).filter(Boolean).length;
-    habit.completed = completedDays;
-
-    // Calculate streak (simplified - counts consecutive completed days)
-    let currentStreak = 0;
-    const dates = Object.keys(habit.tracking).sort().reverse();
-    
-    for (const trackDate of dates) {
-      if (habit.tracking[trackDate]) {
-        currentStreak++;
-      } else {
-        break;
-      }
-    }
-    
-    habit.streak = currentStreak;
-    
-    // Update longest streak if current is longer
-    if (currentStreak > habit.longestStreak) {
-      habit.longestStreak = currentStreak;
-    }
-
-    await habit.save();
 
     return NextResponse.json({
       success: true,
@@ -70,12 +35,18 @@ export async function POST(
         streak: habit.streak,
         longestStreak: habit.longestStreak,
         tracking: habit.tracking,
-      }
+      },
     });
+
   } catch (error) {
     console.error('Habit tracking error:', error);
+    
+    if (error instanceof Error && error.message === 'Authentication required') {
+      return createAuthErrorResponse();
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to track habit' },
+      { success: false, error: 'Failed to update habit tracking' },
       { status: 500 }
     );
   }

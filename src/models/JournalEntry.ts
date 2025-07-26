@@ -1,14 +1,12 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IJournalEntry extends Document {
-  userId: mongoose.Types.ObjectId;
-  date: Date;
+  userId: string; // Auth0 user ID
   title: string;
   content: string;
-  mood: string;
+  mood: 'happy' | 'sad' | 'excited' | 'anxious' | 'calm' | 'frustrated' | 'grateful' | 'neutral';
   tags: string[];
   isPrivate: boolean;
-  // AI Analysis fields
   aiAnalysis?: {
     sentiment: 'positive' | 'neutral' | 'negative';
     motivationLevel: number; // 1-5 scale
@@ -23,14 +21,9 @@ export interface IJournalEntry extends Document {
 
 const JournalEntrySchema = new Schema<IJournalEntry>({
   userId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
+    type: String,
     required: true,
-  },
-  date: {
-    type: Date,
-    required: true,
-    default: Date.now,
+    index: true,
   },
   title: {
     type: String,
@@ -44,8 +37,8 @@ const JournalEntrySchema = new Schema<IJournalEntry>({
   },
   mood: {
     type: String,
+    enum: ['happy', 'sad', 'excited', 'anxious', 'calm', 'frustrated', 'grateful', 'neutral'],
     required: true,
-    enum: ['happy', 'sad', 'excited', 'anxious', 'calm', 'frustrated', 'grateful', 'stressed', 'content', 'other'],
   },
   tags: [{
     type: String,
@@ -87,7 +80,7 @@ const JournalEntrySchema = new Schema<IJournalEntry>({
 });
 
 // Create indexes for efficient queries
-JournalEntrySchema.index({ userId: 1, date: -1 });
+JournalEntrySchema.index({ userId: 1, createdAt: -1 });
 JournalEntrySchema.index({ userId: 1, mood: 1 });
 JournalEntrySchema.index({ userId: 1, 'aiAnalysis.sentiment': 1 });
 JournalEntrySchema.index({ userId: 1, isPrivate: 1 });
