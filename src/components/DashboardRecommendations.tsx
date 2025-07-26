@@ -1,29 +1,57 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/Button';
 
 interface Recommendation {
   title: string;
   description: string;
-  category: string;
+  category?: string;
+  frequency?: string;
+  goal?: number;
+  reasoning?: string;
+  skills?: string[];
+  growthPotential?: string;
+  workStyle?: string;
 }
 
 interface RecommendationsData {
-  habits: Recommendation[];
-  careerPaths: Recommendation[];
+  recommendations: {
+    habits: Recommendation[];
+    careerPaths: Recommendation[];
+  };
   context: {
     mbtiType: string;
-    mbtiConfidence: number;
-    activeHabitsCount: number;
-    totalCompletions: number;
-    averageStreak: number;
+    confidence?: number;
+    recentMood?: string;
+    habitStats?: {
+      totalHabits: number;
+      avgStreak: number;
+    };
+    note?: string;
   };
 }
+
+const fadeInUp = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.6 }
+};
+
+const staggerContainer = {
+  animate: {
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
 
 export default function DashboardRecommendations() {
   const [recommendations, setRecommendations] = useState<RecommendationsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     fetchRecommendations();
@@ -31,72 +59,89 @@ export default function DashboardRecommendations() {
 
   const fetchRecommendations = async () => {
     try {
-      // Get user data first
-      const userResponse = await fetch('/api/user/profile');
-      const userData = await userResponse.json();
+      setIsRefreshing(true);
+      setError('');
 
-      if (!userData.success || !userData.mbtiType) {
-        setError('Please complete the MBTI quiz first to get personalized recommendations.');
-        setIsLoading(false);
-        return;
-      }
-
-      // Fetch recommendations
-      const response = await fetch('/api/recommendations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          userId: userData.userId,
-          limit: 5
-        }),
-      });
-
+      const response = await fetch('/api/recommendations');
       const data = await response.json();
 
       if (data.success) {
         setRecommendations(data);
       } else {
-        if (data.error && (data.error.includes('rate limit') || data.error.includes('429'))) {
-          setError('AI recommendations temporarily unavailable. Please try again later.');
-        } else {
-          setError(data.error || 'Failed to load recommendations');
-        }
+        setError(data.error || 'Failed to load recommendations');
       }
     } catch (error) {
       console.error('Error fetching recommendations:', error);
       setError('Failed to load recommendations');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  const getGrowthColor = (growth: string | undefined) => {
+    switch (growth?.toLowerCase()) {
+      case 'very high':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      case 'high':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'low':
+        return 'bg-orange-100 text-orange-800 border-orange-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getCategoryColor = (category: string | undefined) => {
+    switch (category?.toLowerCase()) {
+      case 'productivity':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'wellness':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'learning':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'growth':
+        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold mb-4">AI-Powered Recommendations</h3>
-        <div className="flex items-center justify-center h-32">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex items-center justify-center h-64"
+      >
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading your personalized insights...</p>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold mb-4">AI-Powered Recommendations</h3>
-        <div className="text-center text-gray-500 py-4">
-          <p className="mb-3">{error}</p>
-          <button 
-            onClick={fetchRecommendations}
-            className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-red-50 border border-red-200 rounded-xl p-6 text-center"
+      >
+        <div className="text-red-600 text-4xl mb-4">⚠️</div>
+        <h3 className="text-lg font-semibold text-red-800 mb-2">Unable to Load Recommendations</h3>
+        <p className="text-red-700 mb-4">{error}</p>
+        <Button 
+          onClick={fetchRecommendations}
+          variant="outline"
+          className="border-red-300 text-red-700 hover:bg-red-100"
+        >
+          Try Again
+        </Button>
+      </motion.div>
     );
   }
 
@@ -105,71 +150,195 @@ export default function DashboardRecommendations() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Context Info */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg p-4">
-        <h3 className="text-lg font-semibold mb-2">Your Profile Context</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+    <motion.div 
+      variants={staggerContainer}
+      initial="initial"
+      animate="animate"
+      className="space-y-8"
+    >
+      {/* Header Section */}
+      <motion.div 
+        variants={fadeInUp}
+        className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border border-indigo-100 rounded-2xl p-8 shadow-sm"
+      >
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
           <div>
-            <div className="font-medium">MBTI Type</div>
-            <div>{recommendations.context.mbtiType}</div>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">
+              ✨ Personalized Insights for {recommendations.context.mbtiType}
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl">
+              AI-powered recommendations tailored to your personality and patterns
+            </p>
           </div>
-          <div>
-            <div className="font-medium">Confidence</div>
-            <div>{recommendations.context.mbtiConfidence}%</div>
-          </div>
-          <div>
-            <div className="font-medium">Active Habits</div>
-            <div>{recommendations.context.activeHabitsCount}</div>
-          </div>
-          <div>
-            <div className="font-medium">Avg Streak</div>
-            <div>{recommendations.context.averageStreak.toFixed(1)} days</div>
-          </div>
+          <Button 
+            onClick={fetchRecommendations}
+            disabled={isRefreshing}
+            variant="outline"
+            className="border-indigo-300 text-indigo-700 hover:bg-indigo-100 px-6 py-3 text-base font-medium"
+          >
+            {isRefreshing ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600 mr-2"></div>
+                Refreshing...
+              </>
+            ) : (
+              '🔄 Refresh Recommendations'
+            )}
+          </Button>
         </div>
-      </div>
-
-      {/* Habits Recommendations */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
-          <span className="text-green-600 mr-2">🌱</span>
-          Recommended Habits
-        </h3>
-        <div className="space-y-4">
-          {recommendations.habits.map((habit, index) => (
-            <div key={index} className="border-l-4 border-green-500 pl-4 py-2">
-              <h4 className="font-medium text-gray-900">{habit.title}</h4>
-              <p className="text-gray-600 text-sm mt-1">{habit.description}</p>
+        
+        {/* Context Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <motion.div 
+            variants={fadeInUp}
+            className="bg-white rounded-xl p-4 border border-indigo-200 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="text-sm text-slate-500 mb-1">MBTI Type</div>
+            <div className="font-bold text-lg text-slate-900">{recommendations.context.mbtiType}</div>
+          </motion.div>
+          <motion.div 
+            variants={fadeInUp}
+            className="bg-white rounded-xl p-4 border border-indigo-200 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="text-sm text-slate-500 mb-1">Recent Mood</div>
+            <div className="font-bold text-lg text-slate-900 capitalize">
+              {recommendations.context.recentMood || 'Neutral'}
             </div>
+          </motion.div>
+          <motion.div 
+            variants={fadeInUp}
+            className="bg-white rounded-xl p-4 border border-indigo-200 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="text-sm text-slate-500 mb-1">Active Habits</div>
+            <div className="font-bold text-lg text-slate-900">
+              {recommendations.context.habitStats?.totalHabits || 0}
+            </div>
+          </motion.div>
+          <motion.div 
+            variants={fadeInUp}
+            className="bg-white rounded-xl p-4 border border-indigo-200 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="text-sm text-slate-500 mb-1">Avg Streak</div>
+            <div className="font-bold text-lg text-slate-900">
+              {recommendations.context.habitStats?.avgStreak || 0} days
+            </div>
+          </motion.div>
+        </div>
+        
+        {recommendations.context.note && (
+          <motion.div 
+            variants={fadeInUp}
+            className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl"
+          >
+            <p className="text-sm text-blue-700 italic">{recommendations.context.note}</p>
+          </motion.div>
+        )}
+      </motion.div>
+
+      {/* Career Recommendations */}
+      <motion.div 
+        variants={fadeInUp}
+        className="bg-slate-50 rounded-2xl p-8 border border-slate-200 shadow-sm"
+      >
+        <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mb-8 flex items-center">
+          <span className="text-4xl mr-4">💼</span>
+          Recommended Careers
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {recommendations.recommendations.careerPaths.map((career, index) => (
+            <motion.div 
+              key={index}
+              variants={fadeInUp}
+              className="bg-white rounded-xl p-6 border border-slate-200 hover:shadow-lg hover:border-indigo-300 transition-all duration-300 group cursor-pointer"
+            >
+              <div className="flex justify-between items-start mb-4">
+                <h4 className="font-bold text-lg text-slate-900 group-hover:text-indigo-700 transition-colors">
+                  {career.title}
+                </h4>
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getGrowthColor(career.growthPotential)}`}>
+                  {(career.growthPotential || 'Medium').toUpperCase()} Growth
+                </span>
+              </div>
+              <p className="text-slate-600 text-sm mb-4 leading-relaxed">{career.description}</p>
+              
+              {career.skills && career.skills.length > 0 && (
+                <div className="mb-4">
+                  <div className="text-xs font-semibold text-slate-700 mb-2">Key Skills:</div>
+                  <div className="flex flex-wrap gap-2">
+                    {career.skills.slice(0, 3).map((skill, skillIndex) => (
+                      <span key={skillIndex} className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-medium">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <div className="text-xs text-slate-500 pt-2 border-t border-slate-100">
+                <span className="font-semibold">Work Style:</span> {career.workStyle || 'Flexible'}
+              </div>
+            </motion.div>
           ))}
         </div>
-      </div>
+      </motion.div>
 
-      {/* Career Paths */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
-          <span className="text-blue-600 mr-2">💼</span>
-          Career Paths
+      {/* Habit Suggestions */}
+      <motion.div 
+        variants={fadeInUp}
+        className="bg-teal-50 rounded-2xl p-8 border border-teal-200 shadow-sm"
+      >
+        <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mb-8 flex items-center">
+          <span className="text-4xl mr-4">📈</span>
+          Habit Suggestions
         </h3>
-        <div className="space-y-4">
-          {recommendations.careerPaths.map((career, index) => (
-            <div key={index} className="border-l-4 border-blue-500 pl-4 py-2">
-              <h4 className="font-medium text-gray-900">{career.title}</h4>
-              <p className="text-gray-600 text-sm mt-1">{career.description}</p>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {recommendations.recommendations.habits.map((habit, index) => (
+            <motion.div 
+              key={index}
+              variants={fadeInUp}
+              className="bg-white rounded-xl p-6 border border-teal-200 hover:shadow-lg hover:border-teal-300 transition-all duration-300 group cursor-pointer"
+            >
+              <div className="flex justify-between items-start mb-4">
+                <h4 className="font-bold text-lg text-slate-900 group-hover:text-teal-700 transition-colors">
+                  {habit.title}
+                </h4>
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getCategoryColor(habit.category)}`}>
+                  {habit.category || 'General'}
+                </span>
+              </div>
+              <p className="text-slate-600 text-sm mb-4 leading-relaxed">{habit.description}</p>
+              
+              <div className="flex items-center justify-between text-xs text-slate-500 mb-3">
+                <span><span className="font-semibold">Frequency:</span> {habit.frequency || 'Daily'}</span>
+                <span><span className="font-semibold">Goal:</span> {(habit.goal || 1)}x</span>
+              </div>
+              
+              {habit.reasoning && (
+                <p className="text-xs text-slate-600 italic leading-relaxed pt-2 border-t border-slate-100">
+                  "{habit.reasoning}"
+                </p>
+              )}
+            </motion.div>
           ))}
         </div>
-      </div>
+      </motion.div>
 
-      {/* Refresh Button */}
-      <div className="text-center">
-        <button 
-          onClick={fetchRecommendations}
-          className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-        >
-          Refresh Recommendations
-        </button>
-      </div>
-    </div>
+      {/* Motivation Tip */}
+      <motion.div 
+        variants={fadeInUp}
+        className="bg-amber-50 rounded-2xl p-8 border border-amber-200 shadow-sm"
+      >
+        <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mb-6 flex items-center">
+          <span className="text-4xl mr-4">💡</span>
+          Motivation Tip
+        </h3>
+        <div className="bg-white rounded-xl p-6 border border-amber-200 shadow-sm">
+          <p className="text-slate-700 leading-relaxed text-lg">
+            Embrace your <span className="font-semibold text-amber-700">{recommendations.context.mbtiType}</span> personality type and use your natural strengths to achieve your goals. 
+            Remember that consistency beats perfection - focus on building sustainable habits that align with your personality.
+          </p>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 } 
