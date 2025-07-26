@@ -19,7 +19,6 @@ const UserSchema = new Schema<IUser>({
     type: String,
     required: true,
     unique: true,
-    index: true,
   },
   email: {
     type: String,
@@ -58,7 +57,7 @@ const UserSchema = new Schema<IUser>({
   timestamps: true,
 });
 
-// Create index for better query performance
+// Create indexes for better query performance
 UserSchema.index({ auth0Id: 1 });
 UserSchema.index({ email: 1 });
 

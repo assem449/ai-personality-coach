@@ -20,7 +20,6 @@ const JournalEntrySchema = new Schema<IJournalEntry>({
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    index: true,
   },
   date: {
     type: Date,

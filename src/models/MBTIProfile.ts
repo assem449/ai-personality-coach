@@ -33,7 +33,6 @@ const MBTIProfileSchema = new Schema<IMBTIProfile>({
     ref: 'User',
     required: true,
     unique: true,
-    index: true,
   },
   mbtiType: {
     type: String,

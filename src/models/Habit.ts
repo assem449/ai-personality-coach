@@ -13,6 +13,7 @@ export interface IHabit extends Document {
   isActive: boolean;
   startDate: Date;
   endDate?: Date;
+  tracking?: Record<string, boolean>; // Daily tracking data
   reminders: {
     enabled: boolean;
     time: string; // HH:MM format
@@ -27,7 +28,6 @@ const HabitSchema = new Schema<IHabit>({
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    index: true,
   },
   title: {
     type: String,
@@ -79,6 +79,10 @@ const HabitSchema = new Schema<IHabit>({
   },
   endDate: {
     type: Date,
+  },
+  tracking: {
+    type: Schema.Types.Mixed, // Store as object with date keys
+    default: {},
   },
   reminders: {
     enabled: {
