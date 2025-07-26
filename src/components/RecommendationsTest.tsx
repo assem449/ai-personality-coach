@@ -22,7 +22,7 @@ interface CareerRecommendation {
 
 interface Recommendations {
   habits: HabitRecommendation[];
-  careers: CareerRecommendation[];
+  careerPaths: CareerRecommendation[];
   insights: string[];
   mbtiInsights: string;
 }
@@ -33,12 +33,18 @@ interface RecommendationsResponse {
   context: {
     mbtiType: string;
     mbtiConfidence?: number;
-    journalEntriesAnalyzed: number;
-    activeHabitsCount: number;
-    totalCompletions: number;
-    averageStreak: number;
+    journalEntriesAnalyzed?: number;
+    activeHabitsCount?: number;
+    totalCompletions?: number;
+    averageStreak?: number;
     averageMotivation?: number;
     dominantMood?: Record<string, number>;
+    recentMood?: string;
+    habitStats?: {
+      totalHabits: number;
+      avgStreak: number;
+      longestStreak: number;
+    };
     note?: string;
   };
 }
@@ -80,14 +86,17 @@ export default function RecommendationsTest() {
       const data = await response.json();
       
       if (data.success && data.user) {
-        setUserData({
-          mbtiType: data.user.mbtiType,
-          userId: data.user._id
-        });
-        
-        // Generate personalized page content using Gemini
-        if (data.user.mbtiType) {
-          generatePageContent(data.user.mbtiType);
+        // Check if user has an MBTI profile
+        if (data.mbtiProfile && data.mbtiProfile.mbtiType) {
+          setUserData({
+            mbtiType: data.mbtiProfile.mbtiType,
+            userId: data.user._id
+          });
+          
+          // Generate personalized page content using Gemini
+          generatePageContent(data.mbtiProfile.mbtiType);
+        } else {
+          setError('Please take the MBTI quiz first to get personalized recommendations.');
         }
       } else {
         setError('Please take the MBTI quiz first to get personalized recommendations.');
@@ -145,14 +154,10 @@ export default function RecommendationsTest() {
 
     try {
       const response = await fetch('/api/recommendations', {
-        method: 'POST',
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          userId: userData.userId,
-          limit: 5 // Get last 5 journal entries for context
-        }),
       });
 
       const data = await response.json();
@@ -304,21 +309,19 @@ export default function RecommendationsTest() {
                 )}
               </div>
               <div>
-                <span className="font-medium">Journal Entries:</span> {recommendations.context.journalEntriesAnalyzed}
+                <span className="font-medium">Recent Mood:</span> {recommendations.context.recentMood || 'neutral'}
               </div>
               <div>
-                <span className="font-medium">Active Habits:</span> {recommendations.context.activeHabitsCount}
+                <span className="font-medium">Active Habits:</span> {recommendations.context.habitStats?.totalHabits || 0}
               </div>
-              {recommendations.context.averageMotivation && (
-                <div>
-                  <span className="font-medium">Avg Motivation:</span> {recommendations.context.averageMotivation}/5
-                </div>
-              )}
+              <div>
+                <span className="font-medium">Avg Streak:</span> {recommendations.context.habitStats?.avgStreak || 0} days
+              </div>
             </div>
-            {recommendations.context.totalCompletions > 0 && (
+            {recommendations.context.totalCompletions && recommendations.context.totalCompletions > 0 && (
               <div className="mt-2 text-sm text-blue-700">
                 <span className="font-medium">Habit Progress:</span> {recommendations.context.totalCompletions} total completions, 
-                {recommendations.context.averageStreak} day average streak
+                {recommendations.context.averageStreak || 0} day average streak
               </div>
             )}
             {recommendations.context.note && (
@@ -326,11 +329,7 @@ export default function RecommendationsTest() {
             )}
           </div>
 
-          {/* MBTI Insights */}
-          <div className="bg-white rounded-lg border shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">MBTI Personality Insights</h3>
-            <p className="text-gray-700">{recommendations.recommendations.mbtiInsights}</p>
-          </div>
+
 
           {/* Habits Recommendations */}
           <div className="bg-white rounded-lg border shadow-sm p-6">
@@ -340,17 +339,17 @@ export default function RecommendationsTest() {
                 <div key={index} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="font-medium text-gray-800">{habit.title}</h4>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(habit.category)}`}>
-                      {habit.category}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(habit.category || 'General')}`}>
+                      {habit.category || 'General'}
                     </span>
                   </div>
                   <p className="text-sm text-gray-600 mb-3">{habit.description}</p>
                   <div className="text-xs text-gray-500 mb-2">
-                    <span className="font-medium">Frequency:</span> {habit.frequency}
+                    <span className="font-medium">Frequency:</span> {habit.frequency || 'Daily'}
                     <span className="mx-2">•</span>
-                    <span className="font-medium">Goal:</span> {habit.goal}x
+                    <span className="font-medium">Goal:</span> {(habit.goal || 1)}x
                   </div>
-                  <p className="text-xs text-gray-700 italic">"{habit.reasoning}"</p>
+                  <p className="text-xs text-gray-700 italic">"{habit.reasoning || 'This habit aligns with your personality type.'}"</p>
                 </div>
               ))}
             </div>
@@ -360,19 +359,19 @@ export default function RecommendationsTest() {
           <div className="bg-white rounded-lg border shadow-sm p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Career Path Recommendations</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {recommendations.recommendations.careers.map((career, index) => (
+              {recommendations.recommendations.careerPaths.map((career, index) => (
                 <div key={index} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="font-medium text-gray-800">{career.title}</h4>
-                    <span className={`text-xs font-medium ${getGrowthColor(career.growthPotential)}`}>
-                      {career.growthPotential.toUpperCase()} Growth
+                    <span className={`text-xs font-medium ${getGrowthColor(career.growthPotential || 'Medium')}`}>
+                      {(career.growthPotential || 'Medium').toUpperCase()} Growth
                     </span>
                   </div>
                   <p className="text-sm text-gray-600 mb-3">{career.description}</p>
                   <div className="mb-3">
                     <span className="text-xs font-medium text-gray-700">Key Skills:</span>
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {career.skills.map((skill, skillIndex) => (
+                      {(career.skills || ['Problem Solving', 'Communication']).map((skill, skillIndex) => (
                         <span key={skillIndex} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
                           {skill}
                         </span>
@@ -380,26 +379,15 @@ export default function RecommendationsTest() {
                     </div>
                   </div>
                   <p className="text-xs text-gray-600 mb-2">
-                    <span className="font-medium">Work Style:</span> {career.workStyle}
+                    <span className="font-medium">Work Style:</span> {career.workStyle || 'Flexible'}
                   </p>
-                  <p className="text-xs text-gray-700 italic">"{career.reasoning}"</p>
+                  <p className="text-xs text-gray-700 italic">"{career.reasoning || 'This role aligns with your personality strengths.'}"</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Personal Insights */}
-          <div className="bg-white rounded-lg border shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Personal Insights</h3>
-            <ul className="space-y-2">
-              {recommendations.recommendations.insights.map((insight, index) => (
-                <li key={index} className="flex items-start">
-                  <span className="text-blue-500 mr-2 mt-1">•</span>
-                  <span className="text-gray-700">{insight}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+
         </div>
       )}
     </div>

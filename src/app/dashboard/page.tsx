@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import SentimentChart from '@/components/SentimentChart';
 import DashboardRecommendations from '@/components/DashboardRecommendations';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import MBTIResult from '@/components/MBTIResult';
+import { useAuth } from '@/hooks/useAuth';
 
 interface UserProfile {
   _id: string;
@@ -19,13 +22,16 @@ interface UserProfile {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    loadUserProfile();
-  }, []);
+    if (user) {
+      loadUserProfile();
+    }
+  }, [user]);
 
   const loadUserProfile = async () => {
     try {
@@ -34,12 +40,6 @@ export default function DashboardPage() {
 
       if (data.success) {
         setUserProfile(data);
-        
-        // Simple protection: redirect to quiz if no MBTI profile
-        if (!data.hasMBTIProfile) {
-          // Don't redirect immediately, let user see the dashboard with quiz prompt
-          console.log('No MBTI profile found - showing quiz prompt');
-        }
       } else {
         setError(data.error || 'Failed to load user profile');
       }
@@ -55,57 +55,43 @@ export default function DashboardPage() {
     router.push('/quiz');
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-teal-50">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-          </div>
+  const dashboardContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-teal-50">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-slate-900 mb-4">Dashboard</h1>
-            <Card className="max-w-md mx-auto">
-              <CardContent className="pt-6">
-                <p className="text-red-600 mb-4">{error}</p>
-                <Button 
-                  onClick={loadUserProfile}
-                  variant="outline"
-                >
-                  Retry
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+    if (error) {
+      return (
+        <div className="text-center">
+          <Card className="max-w-md mx-auto">
+            <CardContent className="pt-6">
+              <p className="text-red-600 mb-4">{error}</p>
+              <Button 
+                onClick={loadUserProfile}
+                variant="outline"
+              >
+                Retry
+              </Button>
+            </CardContent>
+          </Card>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  if (!userProfile) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-teal-50">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-slate-900 mb-4">Dashboard</h1>
-            <p className="text-slate-600">No user profile found.</p>
-          </div>
+    if (!userProfile) {
+      return (
+        <div className="text-center">
+          <p className="text-slate-600">No user profile found.</p>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-teal-50">
-      <div className="container mx-auto px-4 py-8">
+    return (
+      <>
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-2">
@@ -118,60 +104,7 @@ export default function DashboardPage() {
 
         {/* MBTI Profile Section */}
         <div className="mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center text-2xl">
-                <span className="text-3xl mr-3">🧠</span>
-                Your MBTI Profile
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {userProfile.hasMBTIProfile ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="text-center p-6 rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200">
-                    <div className="text-4xl font-bold text-indigo-600 mb-2">
-                      {userProfile.mbtiType}
-                    </div>
-                    <div className="text-sm text-slate-600">Personality Type</div>
-                  </div>
-                  <div className="text-center p-6 rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200">
-                    <div className="text-4xl font-bold text-teal-600 mb-2">
-                      {userProfile.mbtiConfidence}%
-                    </div>
-                    <div className="text-sm text-slate-600">Assessment Confidence</div>
-                  </div>
-                  <div className="text-center p-6 rounded-xl bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200">
-                    <div className="text-lg font-semibold text-slate-800 mb-2">
-                      {userProfile.mbtiAssessmentDate ? 
-                        new Date(userProfile.mbtiAssessmentDate).toLocaleDateString() : 
-                        'N/A'
-                      }
-                    </div>
-                    <div className="text-sm text-slate-600">Assessment Date</div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="text-6xl mb-6">🧠</div>
-                  <h3 className="text-2xl font-semibold text-slate-900 mb-4">
-                    Complete Your MBTI Assessment
-                  </h3>
-                  <p className="text-slate-600 mb-8 max-w-md mx-auto">
-                    Take the personality quiz to unlock personalized insights, 
-                    recommendations, and a deeper understanding of yourself.
-                  </p>
-                  <Button
-                    onClick={handleTakeQuiz}
-                    size="lg"
-                    variant="gradient"
-                    className="px-8 py-4 text-lg"
-                  >
-                    Take MBTI Quiz
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <MBTIResult onRetake={handleTakeQuiz} showRetakeButton={false} />
         </div>
 
         {/* Sentiment Chart Section - Only show if MBTI profile exists */}
@@ -280,7 +213,17 @@ export default function DashboardPage() {
             Back to Home
           </a>
         </div>
+      </>
+    );
+  };
+
+  return (
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-teal-50">
+        <div className="container mx-auto px-4 py-8">
+          {dashboardContent()}
+        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 } 

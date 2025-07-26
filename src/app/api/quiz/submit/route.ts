@@ -1,41 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, createAuthErrorResponse } from '@/lib/auth0-middleware';
+import connectDB from '@/lib/mongodb';
 import { createOrUpdateMBTIProfile } from '@/lib/db-utils';
+import { requireAuth, createAuthErrorResponse } from '@/lib/auth-utils';
 import { calculateMBTI } from '@/data/mbti-questions';
 
 export async function POST(request: NextRequest) {
   try {
-    const { authUser } = await requireAuth(request);
+    const authUser = await requireAuth(request);
     const { answers } = await request.json();
-
-    if (!answers || typeof answers !== 'object') {
-      return NextResponse.json(
-        { success: false, error: 'Invalid answers format' },
-        { status: 400 }
-      );
+    
+    if (!answers || Object.keys(answers).length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'No answers provided'
+      }, { status: 400 });
     }
 
-    // Calculate MBTI type
+    await connectDB();
+
+    // Calculate MBTI type from answers
     const mbtiType = calculateMBTI(answers);
-    
-    // Calculate confidence (simple percentage based on questions answered)
-    const totalQuestions = 4;
-    const answeredQuestions = Object.keys(answers).length;
-    const confidence = Math.round((answeredQuestions / totalQuestions) * 100);
-    
+    const confidence = Math.round((Object.keys(answers).length / 4) * 100);
+    const assessmentDate = new Date().toISOString();
+
     // Store MBTI profile in database
-    const mbtiProfile = await createOrUpdateMBTIProfile(authUser.auth0Id, {
-      mbtiType: mbtiType,
-      confidence: confidence,
-      answers: answers,
+    await createOrUpdateMBTIProfile(authUser.sub, {
+      mbtiType,
+      confidence,
+      answers,
     });
 
     return NextResponse.json({
       success: true,
-      mbtiType: mbtiType,
-      confidence: confidence,
-      description: `Your MBTI type is ${mbtiType}`,
-      profileId: mbtiProfile._id,
+      mbtiType,
+      confidence,
+      description: `You are a ${mbtiType} personality type with ${confidence}% confidence.`,
     });
 
   } catch (error) {
@@ -45,9 +44,9 @@ export async function POST(request: NextRequest) {
       return createAuthErrorResponse();
     }
     
-    return NextResponse.json(
-      { success: false, error: 'Failed to submit quiz' },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to submit quiz'
+    }, { status: 500 });
   }
 } 

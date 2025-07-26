@@ -1,7 +1,12 @@
+'use client';
+
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function HomePage() {
+  const { user, loading, isAuthenticated, login, logout } = useAuth();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-teal-50">
       {/* Navigation */}
@@ -13,12 +18,27 @@ export default function HomePage() {
               <span className="text-xl font-bold text-slate-900">Personality Coach</span>
             </div>
             <div className="flex items-center space-x-4">
-              <a href="/api/auth/login" className="text-slate-600 hover:text-slate-900 transition-colors">
-                Login
-              </a>
-              <a href="/api/auth/login" className="inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 focus:ring-indigo-500 shadow-lg h-10 px-4 text-sm">
-                Get Started
-              </a>
+              {!loading && (
+                <>
+                  {isAuthenticated ? (
+                    <div className="flex items-center space-x-4">
+                      <span className="text-slate-600">Welcome! {user?.name}</span>
+                      <Button variant="outline" size="sm" onClick={logout}>
+                        Sign Out
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-4">
+                      <Button variant="ghost" size="sm" onClick={login}>
+                        Sign In
+                      </Button>
+                      <Button variant="gradient" size="sm" onClick={login}>
+                        Get Started
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -38,9 +58,15 @@ export default function HomePage() {
             personalized journaling, and habit tracking designed for your unique traits.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="/api/auth/login" className="inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 focus:ring-indigo-500 shadow-lg h-12 px-6 text-base text-lg px-8 py-4">
-              Start Your Journey
-            </a>
+            {isAuthenticated ? (
+              <Button size="lg" variant="gradient" className="text-lg px-8 py-4" onClick={() => window.location.href = '/dashboard'}>
+                Go to Dashboard
+              </Button>
+            ) : (
+              <Button size="lg" variant="gradient" className="text-lg px-8 py-4" onClick={login}>
+                Start Your Journey
+              </Button>
+            )}
             <Button size="lg" variant="outline" className="text-lg px-8 py-4">
               Learn More
             </Button>
@@ -206,9 +232,15 @@ export default function HomePage() {
             self-awareness and personalized growth strategies.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="/api/auth/login" className="inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-slate-100 text-slate-900 hover:bg-slate-200 focus:ring-slate-500 shadow-sm h-12 px-6 text-base text-lg px-8 py-4">
-              Start Free Assessment
-            </a>
+            {isAuthenticated ? (
+              <Button size="lg" variant="secondary" className="text-lg px-8 py-4" onClick={() => window.location.href = '/dashboard'}>
+                Go to Dashboard
+              </Button>
+            ) : (
+              <Button size="lg" variant="secondary" className="text-lg px-8 py-4" onClick={login}>
+                Start Free Assessment
+              </Button>
+            )}
             <Button size="lg" variant="outline" className="text-lg px-8 py-4 border-white hover:bg-white hover:text-indigo-600">
               Learn More
             </Button>

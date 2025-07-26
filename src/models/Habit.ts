@@ -19,7 +19,6 @@ const HabitSchema = new Schema<IHabit>({
   userId: {
     type: String,
     required: true,
-    index: true,
   },
   title: {
     type: String,

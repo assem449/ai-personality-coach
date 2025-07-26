@@ -23,7 +23,6 @@ const JournalEntrySchema = new Schema<IJournalEntry>({
   userId: {
     type: String,
     required: true,
-    index: true,
   },
   title: {
     type: String,

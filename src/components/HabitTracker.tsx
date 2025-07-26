@@ -3,18 +3,17 @@
 import { useState, useEffect } from 'react';
 
 interface Habit {
-  id: string;
+  _id: string;
   title: string;
   description: string;
   category: string;
   frequency: string;
-  goal: number;
   completed: number;
   streak: number;
   longestStreak: number;
   isActive: boolean;
-  startDate: string;
   tracking?: Record<string, boolean>;
+  createdAt: string;
 }
 
 interface HabitFormData {
@@ -22,7 +21,6 @@ interface HabitFormData {
   description: string;
   category: string;
   frequency: string;
-  goal: string;
 }
 
 export default function HabitTracker() {
@@ -34,8 +32,7 @@ export default function HabitTracker() {
     title: '',
     description: '',
     category: 'health',
-    frequency: 'daily',
-    goal: '1'
+    frequency: 'daily'
   });
 
   // Get last 7 days for tracking
@@ -99,8 +96,7 @@ export default function HabitTracker() {
           title: '',
           description: '',
           category: 'health',
-          frequency: 'daily',
-          goal: '1'
+          frequency: 'daily'
         });
         setError('');
       } else {
@@ -127,7 +123,7 @@ export default function HabitTracker() {
       if (data.success) {
         // Update the habit in state
         setHabits(prev => prev.map(habit => 
-          habit.id === habitId 
+          habit._id === habitId 
             ? { 
                 ...habit, 
                 completed: data.habit.completed,
@@ -229,7 +225,7 @@ export default function HabitTracker() {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Category *
@@ -265,19 +261,7 @@ export default function HabitTracker() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Goal (times) *
-                </label>
-                <input
-                  type="number"
-                  value={formData.goal}
-                  onChange={(e) => setFormData(prev => ({ ...prev, goal: e.target.value }))}
-                  className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  min="1"
-                  required
-                />
-              </div>
+
             </div>
 
             <div className="flex gap-2">
@@ -313,7 +297,7 @@ export default function HabitTracker() {
       ) : (
         <div className="space-y-6">
           {habits.map((habit) => (
-            <div key={habit.id} className="bg-white rounded-lg border shadow-sm p-6">
+            <div key={habit._id} className="bg-white rounded-lg border shadow-sm p-6">
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800">{habit.title}</h3>
@@ -332,7 +316,7 @@ export default function HabitTracker() {
                 <div className="text-right">
                   <p className="text-sm text-gray-600">Progress</p>
                   <p className="text-lg font-bold text-blue-600">
-                    {habit.completed}/{habit.goal}
+                    {habit.completed} completed
                   </p>
                   <p className="text-xs text-gray-500">
                     {habit.streak} day streak
@@ -352,7 +336,7 @@ export default function HabitTracker() {
                           {formatDate(date)}
                         </div>
                         <button
-                          onClick={() => trackHabit(habit.id, date, !isCompleted)}
+                          onClick={() => trackHabit(habit._id, date, !isCompleted)}
                           className={`w-8 h-8 rounded-full border-2 transition-colors ${
                             isCompleted
                               ? 'bg-green-500 border-green-500 text-white'

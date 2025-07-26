@@ -1,41 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, createAuthErrorResponse } from '@/lib/auth0-middleware';
+import connectDB from '@/lib/mongodb';
 import { createJournalEntry, getJournalEntries } from '@/lib/db-utils';
+import { requireAuth, createAuthErrorResponse } from '@/lib/auth-utils';
 import { analyzeJournalEntry } from '@/lib/gemini';
 
 export async function POST(request: NextRequest) {
   try {
-    const { authUser } = await requireAuth(request);
+    const authUser = await requireAuth(request);
     const { title, content, mood, tags, isPrivate } = await request.json();
-
-    if (!title || !content || !mood) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
-        { status: 400 }
-      );
+    
+    if (!content || content.trim().length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'Journal content is required'
+      }, { status: 400 });
     }
+
+    await connectDB();
 
     // Analyze journal entry with AI
     let aiAnalysis;
     try {
       aiAnalysis = await analyzeJournalEntry(content);
-    } catch (aiError) {
-      console.error('AI analysis failed:', aiError);
-      // Continue without AI analysis
+    } catch (error) {
+      console.error('AI analysis failed:', error);
+      // Provide fallback analysis
       aiAnalysis = {
         sentiment: 'neutral' as const,
         motivationLevel: 3,
-        summary: 'Analysis unavailable',
-        insights: ['Consider reflecting on your day'],
-        moodKeywords: ['reflective'],
+        summary: 'Journal entry recorded successfully.',
+        insights: ['Your entry has been saved for future reflection.'],
+        moodKeywords: ['reflection']
       };
     }
 
     // Create journal entry
-    const journalEntry = await createJournalEntry(authUser.auth0Id, {
-      title,
+    const entry = await createJournalEntry(authUser.sub, {
+      title: title || 'Daily Reflection',
       content,
-      mood,
+      mood: mood || 'neutral',
       tags: tags || [],
       isPrivate: isPrivate || false,
       aiAnalysis,
@@ -44,13 +47,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       entry: {
-        id: journalEntry._id,
-        title: journalEntry.title,
-        content: journalEntry.content,
-        mood: journalEntry.mood,
-        aiAnalysis: journalEntry.aiAnalysis,
-        createdAt: journalEntry.createdAt,
-      },
+        _id: entry._id,
+        title: entry.title,
+        content: entry.content,
+        mood: entry.mood,
+        aiAnalysis: entry.aiAnalysis,
+        createdAt: entry.createdAt,
+      }
     });
 
   } catch (error) {
@@ -60,28 +63,29 @@ export async function POST(request: NextRequest) {
       return createAuthErrorResponse();
     }
     
-    return NextResponse.json(
-      { success: false, error: 'Failed to create journal entry' },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to create journal entry'
+    }, { status: 500 });
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
-    const { authUser } = await requireAuth(request);
+    const authUser = await requireAuth(request);
     const { searchParams } = new URL(request.url);
-    
-    const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
-    const isPrivate = searchParams.get('private') === 'true';
-
-    const entries = await getJournalEntries(authUser.auth0Id, limit, page, isPrivate);
-
+    const page = parseInt(searchParams.get('page') || '1');
+    const isPrivate = searchParams.get('isPrivate') === 'true';
+    
+    await connectDB();
+    
+    const entries = await getJournalEntries(authUser.sub, limit, page, isPrivate);
+    
     return NextResponse.json({
       success: true,
       entries: entries.map(entry => ({
-        id: entry._id,
+        _id: entry._id,
         title: entry.title,
         content: entry.content,
         mood: entry.mood,
@@ -89,24 +93,19 @@ export async function GET(request: NextRequest) {
         isPrivate: entry.isPrivate,
         aiAnalysis: entry.aiAnalysis,
         createdAt: entry.createdAt,
-      })),
-      pagination: {
-        page,
-        limit,
-        total: entries.length,
-      },
+      }))
     });
 
   } catch (error) {
-    console.error('Journal retrieval error:', error);
+    console.error('Journal fetch error:', error);
     
     if (error instanceof Error && error.message === 'Authentication required') {
       return createAuthErrorResponse();
     }
     
-    return NextResponse.json(
-      { success: false, error: 'Failed to retrieve journal entries' },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to fetch journal entries'
+    }, { status: 500 });
   }
 } 

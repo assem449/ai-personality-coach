@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
-import { getUserProfile } from '@/lib/db-utils';
+import { getMBTIProfile } from '@/lib/db-utils';
 import { requireAuth, createAuthErrorResponse } from '@/lib/auth-utils';
 
 export async function GET(request: NextRequest) {
@@ -8,22 +8,27 @@ export async function GET(request: NextRequest) {
     const authUser = await requireAuth(request);
     await connectDB();
     
-    const userProfile = await getUserProfile(authUser.sub);
+    const mbtiProfile = await getMBTIProfile(authUser.sub);
     
-    if (!userProfile) {
+    if (!mbtiProfile) {
       return NextResponse.json({
         success: false,
-        error: 'User profile not found'
+        error: 'No MBTI profile found',
+        hasProfile: false
       }, { status: 404 });
     }
 
     return NextResponse.json({
       success: true,
-      ...userProfile
+      hasProfile: true,
+      mbtiType: mbtiProfile.mbtiType,
+      confidence: mbtiProfile.confidence,
+      assessmentDate: mbtiProfile.assessmentDate,
+      answers: mbtiProfile.answers
     });
 
   } catch (error) {
-    console.error('Error fetching user profile:', error);
+    console.error('Error fetching MBTI profile:', error);
     
     if (error instanceof Error && error.message === 'Authentication required') {
       return createAuthErrorResponse();
@@ -31,7 +36,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({
       success: false,
-      error: 'Failed to fetch user profile'
+      error: 'Failed to fetch MBTI profile'
     }, { status: 500 });
   }
 } 

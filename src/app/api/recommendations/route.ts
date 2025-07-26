@@ -1,165 +1,127 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, createAuthErrorResponse } from '@/lib/auth0-middleware';
+import { requireAuth, createAuthErrorResponse } from '@/lib/auth-utils';
+import connectDB from '@/lib/mongodb';
 import { getMBTIProfile, getJournalEntries, getHabits } from '@/lib/db-utils';
-import { generateText } from '@/lib/gemini';
+import { generateJSON } from '@/lib/gemini';
+import { getHardcodedRecommendations } from '@/lib/hardcoded-responses';
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const { authUser } = await requireAuth(request);
-    const { limit = 5 } = await request.json();
-
-    // Get user's MBTI profile
-    const mbtiProfile = await getMBTIProfile(authUser.auth0Id);
+    const authUser = await requireAuth(request);
+    await connectDB();
+    
+    // Fetch user data
+    const mbtiProfile = await getMBTIProfile(authUser.sub);
+    const recentEntries = await getJournalEntries(authUser.sub);
+    const currentHabits = await getHabits(authUser.sub, true);
+    
     if (!mbtiProfile) {
-      return NextResponse.json(
-        { success: false, error: 'MBTI profile not found. Please complete the quiz first.' },
-        { status: 404 }
-      );
+      return NextResponse.json({
+        success: false,
+        error: 'MBTI profile not found. Please complete the personality assessment first.'
+      }, { status: 404 });
     }
 
-    // Get recent journal entries
-    const recentEntries = await getJournalEntries(authUser.auth0Id, limit, 1);
-    
-    // Get current habits
-    const currentHabits = await getHabits(authUser.auth0Id, true);
-    
-    // Calculate habit statistics
-    const activeHabits = currentHabits.filter(habit => habit.isActive);
-    const totalCompletions = activeHabits.reduce((sum, habit) => sum + habit.completed, 0);
-    const averageStreak = activeHabits.length > 0 
-      ? activeHabits.reduce((sum, habit) => sum + habit.streak, 0) / activeHabits.length 
-      : 0;
-
     // Prepare context for AI
-    const journalContext = recentEntries.map(entry => ({
-      title: entry.title,
-      content: entry.content.substring(0, 200) + '...',
-      mood: entry.mood,
-      sentiment: entry.aiAnalysis?.sentiment || 'neutral',
-      motivation: entry.aiAnalysis?.motivationLevel || 3,
-    }));
+    const habitStats = currentHabits.length > 0 ? {
+      totalHabits: currentHabits.length,
+      avgStreak: Math.round(currentHabits.reduce((sum, h) => sum + (h.streak || 0), 0) / currentHabits.length),
+      longestStreak: Math.max(...currentHabits.map(h => h.longestStreak || 0))
+    } : { totalHabits: 0, avgStreak: 0, longestStreak: 0 };
 
-    const habitContext = activeHabits.map(habit => ({
-      title: habit.title,
-      category: habit.category,
-      streak: habit.streak,
-      completed: habit.completed,
-    }));
+    const recentMood = recentEntries.length > 0 && recentEntries[0].aiAnalysis 
+      ? recentEntries[0].aiAnalysis.sentiment 
+      : 'neutral';
 
-    // Generate AI recommendations
+    const context = `
+MBTI Type: ${mbtiProfile.mbtiType} (${mbtiProfile.confidence}% confidence)
+Recent Mood: ${recentMood}
+Current Habits: ${currentHabits.length} active habits
+Average Streak: ${habitStats.avgStreak} days
+Longest Streak: ${habitStats.longestStreak} days
+
+Recent Journal Themes: ${recentEntries.slice(0, 3).map(entry => 
+  entry.aiAnalysis?.summary || entry.content.substring(0, 100)
+).join('; ')}
+
+Current Habits: ${currentHabits.map(h => `${h.title} (${h.streak || 0} day streak)`).join(', ')}
+`;
+
     const prompt = `
-Based on the following user profile and data, provide personalized recommendations for habits and career paths.
+Based on this user's MBTI personality type and current patterns, provide personalized recommendations.
 
-MBTI Profile:
-- Type: ${mbtiProfile.mbtiType}
-- Assessment Date: ${mbtiProfile.assessmentDate}
-- Confidence: ${mbtiProfile.confidence}%
+User Context:
+${context}
 
-Current Habits (${activeHabits.length} active):
-${habitContext.map(h => `- ${h.title} (${h.category}): ${h.completed} completions, ${h.streak} day streak`).join('\n')}
+Please provide 3 specific habit recommendations and 3 career path suggestions that would be particularly well-suited for this personality type and current situation.
 
-Recent Journal Entries (${recentEntries.length} entries):
-${journalContext.map(j => `- "${j.title}": ${j.sentiment} sentiment, motivation level ${j.motivation}`).join('\n')}
+Focus on:
+- Habits that align with their MBTI strengths
+- Career paths that leverage their natural preferences
+- Practical, actionable suggestions
+- Consider their current mood and habit patterns
 
-Statistics:
-- Total habit completions: ${totalCompletions}
-- Average streak: ${averageStreak.toFixed(1)} days
-
-Please provide recommendations in the following JSON format:
+Return the response as JSON with this exact structure:
 {
   "habits": [
     {
       "title": "Habit name",
-      "description": "Why this habit would be beneficial for this MBTI type and current patterns"
+      "description": "Why this habit would work well for this personality type"
     }
   ],
   "careerPaths": [
     {
       "title": "Career path name", 
-      "description": "Why this career path aligns with their personality and current habits"
+      "description": "Why this career path aligns with their MBTI type"
     }
   ]
 }
-
-Guidelines:
-- Suggest 3 habits that complement their current patterns or address gaps
-- Consider their MBTI type's strengths and preferences
-- Suggest 3 career paths that leverage their personality type
-- Make recommendations specific to their current habit patterns and journal sentiment
-- If they have few habits, suggest foundational habits
-- If they have good habits, suggest optimization habits
 `;
 
     try {
-      const aiResponse = await generateText(prompt, { 
-        model: 'gemini-1.5-pro',
-        temperature: 0.7,
-        maxTokens: 1500,
-        retries: 1
-      });
-
-      // Parse AI response
-      const recommendations = JSON.parse(aiResponse);
-
+      const aiResponse = await generateJSON(prompt);
+      
       return NextResponse.json({
         success: true,
-        habits: recommendations.habits || [],
-        careerPaths: recommendations.careerPaths || [],
+        recommendations: aiResponse,
         context: {
           mbtiType: mbtiProfile.mbtiType,
-          mbtiConfidence: mbtiProfile.confidence,
-          activeHabitsCount: activeHabits.length,
-          totalCompletions,
-          averageStreak,
-        },
+          confidence: mbtiProfile.confidence,
+          recentMood,
+          habitStats
+        }
       });
 
     } catch (aiError) {
       console.error('AI recommendation generation failed:', aiError);
       
-      // Fallback recommendations
-      const fallbackRecommendations = {
-        habits: [
-          {
-            title: "Morning Reflection",
-            description: "Start your day with 10 minutes of quiet reflection to align with your ${mbtiProfile.mbtiType} preferences."
-          },
-          {
-            title: "Weekly Planning",
-            description: "Set aside time each week to plan and organize, leveraging your natural strengths."
-          },
-          {
-            title: "Mindful Movement",
-            description: "Incorporate gentle physical activity to balance your mental and physical well-being."
-          }
-        ],
-        careerPaths: [
-          {
-            title: "Analytical Roles",
-            description: "Consider careers that leverage your ${mbtiProfile.mbtiType} analytical and systematic thinking."
-          },
-          {
-            title: "Creative Problem Solving",
-            description: "Explore roles that allow you to use your unique perspective and innovative thinking."
-          },
-          {
-            title: "Strategic Planning",
-            description: "Look into positions that require long-term thinking and strategic decision-making."
-          }
-        ]
-      };
-
+      // Immediately use hardcoded recommendations when AI fails
+      const hardcodedRecommendations = getHardcodedRecommendations(mbtiProfile.mbtiType);
+      
+      // Determine the type of error for better user feedback
+      let note = 'AI recommendations temporarily unavailable. Showing personality-based suggestions.';
+      if (aiError instanceof Error) {
+        if (aiError.message.includes('rate limit') || aiError.message.includes('429')) {
+          note = 'AI service is currently busy. Showing personality-based recommendations instead.';
+        } else if (aiError.message.includes('API key') || aiError.message.includes('not configured')) {
+          note = 'AI service not configured. Showing personality-based recommendations.';
+        } else if (aiError.message.includes('quota')) {
+          note = 'AI service quota exceeded. Showing personality-based recommendations.';
+        } else if (aiError.message.includes('hardcoded fallback')) {
+          note = 'Using personality-based recommendations for optimal performance.';
+        }
+      }
+      
       return NextResponse.json({
         success: true,
-        ...fallbackRecommendations,
+        recommendations: hardcodedRecommendations,
         context: {
           mbtiType: mbtiProfile.mbtiType,
-          mbtiConfidence: mbtiProfile.confidence,
-          activeHabitsCount: activeHabits.length,
-          totalCompletions,
-          averageStreak,
+          confidence: mbtiProfile.confidence,
+          recentMood,
+          habitStats
         },
-        note: "AI recommendations temporarily unavailable. Showing fallback recommendations."
+        note
       });
     }
 
@@ -170,9 +132,9 @@ Guidelines:
       return createAuthErrorResponse();
     }
     
-    return NextResponse.json(
-      { success: false, error: 'Failed to generate recommendations' },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to generate recommendations'
+    }, { status: 500 });
   }
 } 

@@ -1,73 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, createAuthErrorResponse } from '@/lib/auth0-middleware';
+import connectDB from '@/lib/mongodb';
 import { getJournalEntries } from '@/lib/db-utils';
+import { requireAuth, createAuthErrorResponse } from '@/lib/auth-utils';
 
 export async function GET(request: NextRequest) {
   try {
-    const { authUser } = await requireAuth(request);
-
-    // Get journal entries from the last 7 days
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-    const entries = await getJournalEntries(authUser.auth0Id, 50, 1);
+    const authUser = await requireAuth(request);
+    await connectDB();
     
-    // Filter entries from last 7 days and extract sentiment data
-    const recentEntries = entries.filter(entry => 
-      new Date(entry.createdAt) >= sevenDaysAgo
-    );
-
-    // Create daily sentiment data
-    const dailySentiment: { [key: string]: { sentiment: string; count: number; avgMotivation: number } } = {};
+    // Get journal entries for the last 7 days
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 7);
     
-    // Initialize last 7 days with default values
-    for (let i = 6; i >= 0; i--) {
+    const entries = await getJournalEntries(authUser.sub, 50, 1);
+    
+    // Filter entries from the last 7 days and group by date
+    const dailyData: Record<string, { sentiment: string; motivationLevel: number; entryCount: number }> = {};
+    
+    // Initialize all days in the range
+    for (let i = 0; i < 7; i++) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      const dateKey = date.toISOString().split('T')[0];
-      dailySentiment[dateKey] = { sentiment: 'neutral', count: 0, avgMotivation: 0 };
+      const dateStr = date.toISOString().split('T')[0];
+      dailyData[dateStr] = { sentiment: 'neutral', motivationLevel: 0, entryCount: 0 };
     }
-
-    // Process entries and calculate daily averages
-    recentEntries.forEach(entry => {
-      if (entry.aiAnalysis) {
-        const dateKey = new Date(entry.createdAt).toISOString().split('T')[0];
+    
+    // Process entries
+    entries.forEach(entry => {
+      const entryDate = new Date(entry.createdAt);
+      const dateStr = entryDate.toISOString().split('T')[0];
+      
+      if (dailyData[dateStr]) {
+        dailyData[dateStr].entryCount++;
         
-        if (dailySentiment[dateKey]) {
-          dailySentiment[dateKey].count++;
-          
-          // Convert sentiment to numeric for averaging
-          const sentimentValue = entry.aiAnalysis.sentiment === 'positive' ? 1 : 
-                                entry.aiAnalysis.sentiment === 'negative' ? -1 : 0;
-          
-          // Calculate running average
-          const currentAvg = dailySentiment[dateKey].avgMotivation;
-          const newCount = dailySentiment[dateKey].count;
-          dailySentiment[dateKey].avgMotivation = 
-            (currentAvg * (newCount - 1) + entry.aiAnalysis.motivationLevel) / newCount;
-          
-          // Determine dominant sentiment for the day
-          if (sentimentValue > 0) {
-            dailySentiment[dateKey].sentiment = 'positive';
-          } else if (sentimentValue < 0) {
-            dailySentiment[dateKey].sentiment = 'negative';
-          }
+        if (entry.aiAnalysis) {
+          // Aggregate sentiment (use the most recent one for the day)
+          dailyData[dateStr].sentiment = entry.aiAnalysis.sentiment;
+          dailyData[dateStr].motivationLevel = entry.aiAnalysis.motivationLevel;
         }
       }
     });
-
-    // Convert to chart format
-    const chartData = Object.entries(dailySentiment).map(([date, data]) => ({
-      date,
-      sentiment: data.sentiment,
-      motivationLevel: Math.round(data.avgMotivation * 10) / 10, // Round to 1 decimal
-      entryCount: data.count
-    }));
-
+    
+    // Convert to array format for charting
+    const chartData = Object.entries(dailyData)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, data]) => ({
+        date,
+        sentiment: data.sentiment,
+        motivationLevel: data.motivationLevel,
+        entryCount: data.entryCount,
+      }));
+    
     return NextResponse.json({
       success: true,
-      data: chartData,
-      totalEntries: recentEntries.length
+      data: chartData
     });
 
   } catch (error) {
@@ -77,9 +64,9 @@ export async function GET(request: NextRequest) {
       return createAuthErrorResponse();
     }
     
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch sentiment data' },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to fetch sentiment data'
+    }, { status: 500 });
   }
 } 

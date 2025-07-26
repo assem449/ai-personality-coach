@@ -15,13 +15,11 @@ const UserSchema = new Schema<IUser>({
     type: String,
     required: true,
     unique: true,
-    index: true,
   },
   email: {
     type: String,
     required: true,
     unique: true,
-    index: true,
   },
   name: {
     type: String,
@@ -37,9 +35,5 @@ const UserSchema = new Schema<IUser>({
 }, {
   timestamps: true,
 });
-
-// Ensure unique indexes
-UserSchema.index({ auth0Id: 1 });
-UserSchema.index({ email: 1 });
 
 export default mongoose.models.User || mongoose.model<IUser>('User', UserSchema); 

@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getHardcodedMBTIInsights } from './hardcoded-responses';
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
@@ -48,13 +49,15 @@ export async function generateText(
     temperature?: number;
     maxTokens?: number;
     retries?: number;
+    useHardcodedFallback?: boolean;
   } = {}
 ): Promise<string> {
   const { 
     model = 'gemini-1.5-pro', 
     temperature = 0.7, 
     maxTokens = 1000,
-    retries = 2
+    retries = 1, // Reduced retries since we have hardcoded fallback
+    useHardcodedFallback = true
   } = options;
 
   try {
@@ -73,7 +76,7 @@ export async function generateText(
 
     let lastError: any;
     
-    // Retry logic for rate limiting
+    // Retry logic with exponential backoff (reduced retries)
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const result = await geminiModel.generateContent(prompt);
@@ -84,13 +87,18 @@ export async function generateText(
         
         // If it's a rate limit error and we have retries left, wait and retry
         if (isRateLimitError(error) && attempt < retries) {
-          const waitTime = Math.pow(2, attempt + 1) * 1000; // Exponential backoff: 2s, 4s, 8s
+          const waitTime = Math.pow(2, attempt + 1) * 1000; // Exponential backoff: 2s, 4s
           console.log(`Rate limit hit, waiting ${waitTime}ms before retry ${attempt + 1}/${retries}`);
           await delay(waitTime);
           continue;
         }
         
-        // If it's not a rate limit error or we're out of retries, break
+        // If it's a rate limit error and we're out of retries, throw immediately
+        if (isRateLimitError(error)) {
+          throw new Error('Gemini API rate limit exceeded. Using hardcoded fallback.');
+        }
+        
+        // If it's not a rate limit error, break immediately
         break;
       }
     }
@@ -108,7 +116,7 @@ export async function generateText(
     
     // If it's a rate limit error, provide helpful message
     if (isRateLimitError(error)) {
-      throw new Error('Gemini API rate limit exceeded. Please wait a moment and try again, or upgrade your API quota.');
+      throw new Error('Gemini API rate limit exceeded. Using hardcoded fallback.');
     }
     
     throw new Error(`Failed to generate text: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -130,11 +138,18 @@ export async function generateJSON(
       ? `${prompt}\n\nReturn ONLY a valid JSON object${jsonSchema ? ` following this schema: ${jsonSchema}` : ''}.`
       : `${prompt}\n\nReturn ONLY a valid JSON object, no additional text.`;
 
-    const response = await generateText(fullPrompt, { temperature: 0.3 });
+    const response = await generateText(fullPrompt, { temperature: 0.3, retries: 1 });
     
     // Clean the response and parse JSON
     const cleanedText = response.replace(/```json\n?|\n?```/g, '').trim();
-    return JSON.parse(cleanedText);
+    
+    try {
+      return JSON.parse(cleanedText);
+    } catch (parseError) {
+      console.error('Failed to parse JSON response:', parseError);
+      console.error('Raw response:', cleanedText);
+      throw new Error('Failed to parse AI response as JSON');
+    }
   } catch (error) {
     console.error('Gemini AI JSON generation error:', error);
     
@@ -145,7 +160,7 @@ export async function generateJSON(
     
     // If it's a rate limit error, provide helpful message
     if (isRateLimitError(error)) {
-      throw new Error('Gemini API rate limit exceeded. Please wait a moment and try again.');
+      throw new Error('Gemini API rate limit exceeded. Using hardcoded fallback.');
     }
     
     throw new Error(`Failed to generate JSON: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -239,5 +254,55 @@ Return ONLY the prompt text, no additional formatting.
   } catch (error) {
     console.error('Error generating journal prompt:', error);
     return 'How are you feeling today? What would you like to reflect on?';
+  }
+}
+
+export interface MBTIInsights {
+  careers: string[];
+  habits: string[];
+  motivationTip: string;
+  strengths: string[];
+  challenges: string[];
+  learningStyle: string;
+}
+
+export async function generateMBTIInsights(mbtiType: string): Promise<MBTIInsights> {
+  try {
+    const prompt = `
+Generate personalized insights for MBTI type ${mbtiType}. Return a JSON object with the following structure:
+
+{
+  "careers": ["career 1", "career 2", "career 3"],
+  "habits": ["habit 1", "habit 2", "habit 3"],
+  "motivationTip": "A personalized motivation tip for this MBTI type",
+  "strengths": ["strength 1", "strength 2", "strength 3"],
+  "challenges": ["challenge 1", "challenge 2", "challenge 3"],
+  "learningStyle": "A brief description of the optimal learning style for this MBTI type"
+}
+
+Guidelines:
+- Careers: Suggest 3 specific career paths that align with this personality type's strengths
+- Habits: Recommend 3 daily habits that would benefit this personality type
+- Motivation Tip: Provide one actionable motivation tip tailored to this type
+- Strengths: List 3 key strengths commonly associated with this MBTI type
+- Challenges: List 3 common challenges this type might face
+- Learning Style: Describe the optimal learning approach for this personality type
+
+Make the insights practical, actionable, and encouraging. Return ONLY the JSON object.
+`;
+
+    const insights = await generateJSON(prompt);
+    
+    // Validate the response
+    if (!insights.careers || !insights.habits || !insights.motivationTip) {
+      throw new Error('Invalid MBTI insights response structure');
+    }
+    
+    return insights as MBTIInsights;
+  } catch (error) {
+    console.error('Error generating MBTI insights:', error);
+    
+    // Use hardcoded responses as final fallback
+    return getHardcodedMBTIInsights(mbtiType);
   }
 } 

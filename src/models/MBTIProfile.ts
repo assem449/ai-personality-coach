@@ -14,7 +14,6 @@ const MBTIProfileSchema = new Schema<IMBTIProfile>({
   userId: {
     type: String,
     required: true,
-    index: true,
   },
   mbtiType: {
     type: String,

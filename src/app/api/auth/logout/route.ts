@@ -1,17 +1,21 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
-  const auth0Domain = process.env.AUTH0_ISSUER_BASE_URL;
-  const clientId = process.env.AUTH0_CLIENT_ID;
-  const returnTo = process.env.AUTH0_BASE_URL;
+  const returnTo = `${process.env.AUTH0_BASE_URL}`;
   
-  if (!auth0Domain || !clientId) {
-    return new Response('Auth0 not configured', { status: 500 });
-  }
+  const logoutUrl = `${process.env.AUTH0_ISSUER_BASE_URL}/v2/logout?` +
+    `client_id=${process.env.AUTH0_CLIENT_ID}&` +
+    `returnTo=${encodeURIComponent(returnTo)}`;
+
+  const response = NextResponse.redirect(logoutUrl);
   
-  const logoutUrl = `${auth0Domain}/v2/logout?` +
-    `client_id=${clientId}&` +
-    `returnTo=${encodeURIComponent(returnTo || 'http://localhost:3000')}`;
-  
-  return Response.redirect(logoutUrl);
+  // Clear the session cookie
+  response.cookies.set('auth0_user', '', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 0,
+  });
+
+  return response;
 } 

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { mbtiQuestions } from '@/data/mbti-questions';
+import MBTIInsights from '@/components/MBTIInsights';
 
 const getDimensionName = (value: string): string => {
   switch (value) {
@@ -26,8 +27,42 @@ export default function QuizPage() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasExistingResult, setHasExistingResult] = useState(false);
+  const [existingMBTI, setExistingMBTI] = useState<string>('');
 
   const progress = ((currentQuestion + 1) / mbtiQuestions.length) * 100;
+
+  useEffect(() => {
+    checkExistingMBTI();
+  }, []);
+
+  const checkExistingMBTI = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/mbti');
+      const data = await response.json();
+
+      if (data.success && data.hasProfile) {
+        setHasExistingResult(true);
+        setExistingMBTI(data.mbtiType);
+      } else {
+        setHasExistingResult(false);
+      }
+    } catch (error) {
+      console.error('Error checking MBTI profile:', error);
+      setHasExistingResult(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRetakeQuiz = () => {
+    setHasExistingResult(false);
+    setCurrentQuestion(0);
+    setAnswers({});
+    setError('');
+  };
 
   const handleAnswer = (questionId: number, answer: string) => {
     setAnswers(prev => ({
@@ -64,7 +99,7 @@ export default function QuizPage() {
       const data = await response.json();
 
       if (data.success) {
-        router.push('/dashboard');
+        router.push('/quiz/result?completed=true');
       } else {
         setError(data.error || 'Failed to submit quiz');
       }
@@ -76,6 +111,41 @@ export default function QuizPage() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-teal-50 py-8">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+            <p className="text-lg text-slate-600">Loading your personality assessment...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show existing MBTI insights if user already has results
+  if (hasExistingResult && existingMBTI) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-teal-50 py-8">
+        <div className="container mx-auto px-4 max-w-6xl">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
+              Your Personality Insights
+            </h1>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Discover personalized recommendations and insights based on your MBTI type
+            </p>
+          </div>
+
+          <MBTIInsights mbtiType={existingMBTI} onRetake={handleRetakeQuiz} />
+        </div>
+      </div>
+    );
+  }
+
+  // Show quiz form if no existing results
   const currentQ = mbtiQuestions[currentQuestion];
 
   return (
