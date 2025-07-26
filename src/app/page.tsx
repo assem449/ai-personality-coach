@@ -175,21 +175,21 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
-          {/* AI Recommendations */}
+          {/* Personalized Insights */}
           <Card className="group hover:shadow-lg transition-all duration-300">
             <CardHeader>
               <div className="w-12 h-12 rounded-lg bg-amber-100 flex items-center justify-center mb-4 group-hover:bg-amber-200 transition-colors">
-                <span className="text-2xl">🤖</span>
+                <span className="text-2xl">✨</span>
               </div>
-              <CardTitle>AI Recommendations</CardTitle>
+              <CardTitle>Personalized Insights</CardTitle>
               <CardDescription>
-                Get personalized suggestions for habits, career paths, and personal growth 
-                based on your MBTI type and current patterns.
+                Discover your unique path with AI-powered recommendations for habits, 
+                career paths, and personal growth based on your personality type.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <a href="/recommendations" className="inline-flex items-center text-amber-600 hover:text-amber-700 font-medium">
-                Get Recommendations
+                Get Insights
                 <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>

@@ -52,10 +52,34 @@ export default function DashboardRecommendations() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
-    fetchRecommendations();
+    checkUserProfile();
   }, []);
+
+  const checkUserProfile = async () => {
+    try {
+      const response = await fetch('/api/user/profile');
+      const data = await response.json();
+      
+      if (data.success) {
+        setUserProfile(data);
+        if (data.hasMBTIProfile) {
+          fetchRecommendations();
+        } else {
+          setIsLoading(false);
+        }
+      } else {
+        setError('Failed to load user profile');
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      setError('Failed to load user profile');
+      setIsLoading(false);
+    }
+  };
 
   const fetchRecommendations = async () => {
     try {
@@ -145,8 +169,60 @@ export default function DashboardRecommendations() {
     );
   }
 
+  // Show MBTI quiz requirement if user doesn't have an MBTI profile
+  if (!userProfile?.hasMBTIProfile) {
+    return (
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-8 text-center"
+      >
+        <div className="text-amber-600 text-6xl mb-6">🧠</div>
+        <h2 className="text-3xl font-bold text-amber-800 mb-4">
+          Click the button below to get your personalized recommendations
+        </h2>
+        <p className="text-lg text-amber-700 mb-6 max-w-2xl mx-auto">
+          To get personalized insights and recommendations, you need to take the MBTI personality quiz first. 
+          This will help us understand your unique traits and provide tailored suggestions.
+        </p>
+        <div className="space-y-4">
+          <Button 
+            onClick={() => window.location.href = '/quiz'}
+            className="bg-amber-600 hover:bg-amber-700 text-white px-8 py-3 text-lg font-medium"
+          >
+            See Results
+          </Button>
+          <div>
+            <a 
+              href="/dashboard" 
+              className="text-amber-600 hover:text-amber-700 underline"
+            >
+              Back to Dashboard
+            </a>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
   if (!recommendations) {
-    return null;
+    return (
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center"
+      >
+        <div className="text-blue-600 text-4xl mb-4">🔄</div>
+        <h3 className="text-lg font-semibold text-blue-800 mb-2">Ready to Generate Insights</h3>
+        <p className="text-blue-700 mb-4">Click the button below to get your personalized recommendations</p>
+        <Button 
+          onClick={fetchRecommendations}
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          Generate Insights
+        </Button>
+      </motion.div>
+    );
   }
 
   return (

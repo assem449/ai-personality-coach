@@ -265,7 +265,7 @@ export default function MBTIResult({ onRetake, showRetakeButton = true }: MBTIRe
                 variant="gradient" 
                 className="flex-1"
               >
-                Get Recommendations
+                Get Personalized Insights
               </Button>
             </div>
           )}

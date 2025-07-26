@@ -90,23 +90,6 @@ export default function QuizResultPage() {
                     Start Tracking
                   </Button>
                 </div>
-
-                <div className="text-center p-6 border border-slate-200 rounded-xl hover:border-purple-300 hover:bg-purple-50 transition-all duration-200">
-                  <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center mx-auto mb-4">
-                    <span className="text-2xl">🤖</span>
-                  </div>
-                  <h3 className="font-semibold text-slate-900 mb-2">Get AI Insights</h3>
-                  <p className="text-sm text-slate-600 mb-4">
-                    Receive personalized recommendations and insights
-                  </p>
-                  <Button 
-                    onClick={() => router.push('/recommendations')} 
-                    variant="outline" 
-                    size="sm"
-                  >
-                    View Insights
-                  </Button>
-                </div>
               </div>
             </CardContent>
           </Card>

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import SentimentChart from '@/components/SentimentChart';
-import DashboardRecommendations from '@/components/DashboardRecommendations';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import MBTIResult from '@/components/MBTIResult';
 import { useAuth } from '@/hooks/useAuth';
@@ -95,7 +94,7 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-2">
-            Welcome back, {userProfile.name}! 👋
+            Welcome back {userProfile.name}! 👋
           </h1>
           <p className="text-xl text-slate-600">
             Your personalized dashboard with insights and recommendations
@@ -122,26 +121,6 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <SentimentChart />
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* AI Recommendations Section - Only show if MBTI profile exists */}
-        {userProfile.hasMBTIProfile && (
-          <div className="mb-8">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center text-2xl">
-                  <span className="text-3xl mr-3">🤖</span>
-                  AI-Powered Recommendations
-                </CardTitle>
-                <CardDescription>
-                  Personalized suggestions based on your personality and patterns
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <DashboardRecommendations />
               </CardContent>
             </Card>
           </div>
@@ -188,11 +167,11 @@ export default function DashboardPage() {
                     className="group flex items-center p-6 border border-slate-200 rounded-xl hover:border-purple-300 hover:bg-purple-50 transition-all duration-200"
                   >
                     <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center mr-4 group-hover:bg-purple-200 transition-colors">
-                      <span className="text-2xl">🤖</span>
+                      <span className="text-2xl">✨</span>
                     </div>
                     <div>
-                      <div className="font-semibold text-slate-900">AI Insights</div>
-                      <div className="text-sm text-slate-600">Get personalized recommendations</div>
+                      <div className="font-semibold text-slate-900">Personalized Insights</div>
+                      <div className="text-sm text-slate-600">Get AI-powered recommendations</div>
                     </div>
                   </a>
                 )}
