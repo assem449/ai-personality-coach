@@ -1,6 +1,7 @@
 # AI Personality Coach
 
 A Next.js application for discovering your MBTI personality type, journaling, and personal growth tracking with Auth0 authentication and MongoDB database.
+Demo Link: https://youtu.be/46ZT3023p9E?si=Y96xMkRTS3z0PLIB
 
 ## Features
 
