@@ -21,7 +21,6 @@ Demo Link: https://youtu.be/46ZT3023p9E?si=Y96xMkRTS3z0PLIB
 - **Authentication**: Auth0
 - **Database**: MongoDB Atlas
 - **ODM**: Mongoose
-- **Deployment**: Ready for Vercel
 
 ## Getting Started
 
