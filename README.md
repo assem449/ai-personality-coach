@@ -1,13 +1,14 @@
 # AI Personality Coach
 
 A Next.js application for discovering your MBTI personality type, journaling, and personal growth tracking with Auth0 authentication and MongoDB database.
+Demo Link: https://youtu.be/46ZT3023p9E?si=Y96xMkRTS3z0PLIB
 
 ## Features
 
 - **Landing Page**: Welcome page with navigation to all features
-- **MBTI Quiz**: Personality type assessment (coming soon)
+- **MBTI Quiz**: Personality type assessment
 - **Dashboard**: User dashboard with profile information
-- **Daily Journal**: Personal reflection and growth tracking (coming soon)
+- **Daily Journal**: Personal reflection and growth tracking
 - **Authentication**: Secure login/logout with Auth0
 - **Database**: MongoDB Atlas with Mongoose ODM
 - **Habit Tracking**: Personal development habit management
@@ -184,4 +185,4 @@ The app is ready for deployment on Vercel:
 
 ## License
 
-This project is licensed under the MIT License.
+This project is for educational and personal use.
