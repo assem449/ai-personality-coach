@@ -57,8 +57,14 @@ Demo Link: https://youtu.be/46ZT3023p9E?si=Y96xMkRTS3z0PLIB
    - Create a new cluster (free tier available)
    - Create a database user with read/write permissions
    - Get your connection string from the cluster
+     
+5. **Set Up Gemini API (Google AI Studio)**:
+   - Go to https://makersuite.google.com/app/apikey
+   - Sign in with your Google account
+   - Generate an API key for Gemini 
+   - Copy the key — you’ll add it to your .env.local file
 
-5. **Environment Variables**:
+6. **Environment Variables**:
    Create a `.env.local` file in the root directory:
    ```env
    # Auth0 Configuration
@@ -70,21 +76,24 @@ Demo Link: https://youtu.be/46ZT3023p9E?si=Y96xMkRTS3z0PLIB
 
    # MongoDB Configuration
    MONGODB_URI='mongodb+srv://username:password@cluster.mongodb.net/ai-personality-coach?retryWrites=true&w=majority'
+
+   # Gemini AP Configuration
+   GEMINI_API_KEY='your_google_gemini_api_key'
    ```
 
-   Replace the values with your Auth0 and MongoDB credentials.
+   Replace the values with your Auth0, MongoDB, and Gemini credentials.
 
-6. **Generate AUTH0_SECRET**:
+7. **Generate AUTH0_SECRET**:
    ```bash
    openssl rand -hex 32
    ```
 
-7. **Run the development server**:
+8. **Run the development server**:
    ```bash
    npm run dev
    ```
 
-8. **Open your browser** and navigate to [http://localhost:3000](http://localhost:3000)
+9. **Open your browser** and navigate to [http://localhost:3000](http://localhost:3000)
 
 ## Database Models
 
