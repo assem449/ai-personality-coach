@@ -87,34 +87,6 @@ Demo Link: https://youtu.be/46ZT3023p9E?si=Y96xMkRTS3z0PLIB
 
 8. **Open your browser** and navigate to [http://localhost:3000](http://localhost:3000)
 
-## Project Structure
-
-```
-src/
-├── app/
-│   ├── api/auth/
-│   │   ├── login/route.ts      # Auth0 login route
-│   │   ├── logout/route.ts     # Auth0 logout route
-│   │   └── callback/route.ts   # Auth0 callback route
-│   ├── dashboard/page.tsx      # User dashboard
-│   ├── journal/page.tsx        # Journal page
-│   ├── quiz/page.tsx           # MBTI quiz
-│   ├── page.tsx                # Landing page
-│   └── layout.tsx              # Root layout
-├── components/
-│   └── AuthButton.tsx          # Authentication component
-├── lib/
-│   ├── mongodb.ts              # MongoDB connection
-│   ├── auth0-config.ts         # Auth0 configuration
-│   └── db-utils.ts             # Database utility functions
-└── models/
-    ├── index.ts                # Model exports
-    ├── User.ts                 # User model
-    ├── JournalEntry.ts         # Journal entry model
-    ├── MBTIProfile.ts          # MBTI profile model
-    └── Habit.ts                # Habit tracking model
-```
-
 ## Database Models
 
 ### User
