@@ -11,6 +11,7 @@ Demo Link: https://youtu.be/46ZT3023p9E?si=Y96xMkRTS3z0PLIB
 - **Daily Journal**: Personal reflection and growth tracking
 - **Authentication**: Secure login/logout with Auth0
 - **Database**: MongoDB Atlas with Mongoose ODM
+- **Personolized Insights**: Powered by Gemini API
 - **Habit Tracking**: Personal development habit management
 
 ## Tech Stack
@@ -31,6 +32,7 @@ Demo Link: https://youtu.be/46ZT3023p9E?si=Y96xMkRTS3z0PLIB
 - npm or yarn
 - Auth0 account
 - MongoDB Atlas account
+- Gemini API Key
 
 ### Installation
 
@@ -76,7 +78,7 @@ Demo Link: https://youtu.be/46ZT3023p9E?si=Y96xMkRTS3z0PLIB
    AUTH0_CLIENT_SECRET='your_client_secret'
 
    # MongoDB Configuration
-   MONGODB_URI='mongodb+srv://username:password@cluster.mongodb.net/ai-personality-coach?retryWrites=true&w=majority'
+   MONGODB_URI='your_mongodb_connection_string'
 
    # Gemini AP Configuration
    GEMINI_API_KEY='your_google_gemini_api_key'
@@ -137,7 +139,7 @@ Demo Link: https://youtu.be/46ZT3023p9E?si=Y96xMkRTS3z0PLIB
 - **Server Components**: Leveraging Next.js 14 App Router for optimal performance
 - **Responsive Design**: Mobile-first approach with Tailwind breakpoints
 - **Database**: MongoDB with Mongoose for data modeling and validation
-
+- **AI Integration**: Gemini API
 
 ## Contributing
 
