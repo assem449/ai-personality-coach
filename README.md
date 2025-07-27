@@ -11,7 +11,7 @@ Demo Link: https://youtu.be/46ZT3023p9E?si=Y96xMkRTS3z0PLIB
 - **Daily Journal**: Personal reflection and growth tracking
 - **Authentication**: Secure login/logout with Auth0
 - **Database**: MongoDB Atlas with Mongoose ODM
-- **Personolized Insights**: Powered by Gemini API
+- **Personalized Insights**: Powered by Gemini API
 - **Habit Tracking**: Personal development habit management
 
 ## Tech Stack
