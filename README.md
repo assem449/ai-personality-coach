@@ -129,24 +129,6 @@ Demo Link: https://youtu.be/46ZT3023p9E?si=Y96xMkRTS3z0PLIB
 - **Responsive Design**: Mobile-first approach with Tailwind breakpoints
 - **Database**: MongoDB with Mongoose for data modeling and validation
 
-## Deployment
-
-The app is ready for deployment on Vercel:
-
-1. Push your code to GitHub
-2. Connect your repository to Vercel
-3. Add your environment variables in Vercel dashboard
-4. Deploy!
-
-## Next Steps
-
-- [ ] Implement MBTI quiz functionality
-- [ ] Add journal entry form and storage
-- [ ] Create user progress tracking
-- [ ] Add personality insights and recommendations
-- [ ] Implement habit tracking features
-- [ ] Add data analytics and insights
-- [ ] Create API endpoints for data operations
 
 ## Contributing
 
