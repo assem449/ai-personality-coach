@@ -20,6 +20,7 @@ Demo Link: https://youtu.be/46ZT3023p9E?si=Y96xMkRTS3z0PLIB
 - **Styling**: Tailwind CSS
 - **Authentication**: Auth0
 - **Database**: MongoDB Atlas
+- **AI Integration**: Gemini API
 - **ODM**: Mongoose
 
 ## Getting Started
